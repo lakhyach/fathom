@@ -275,3 +275,182 @@ Fixed defects introduced during this phase (evidence of clean-up):
 - Working tree after commit: **clean** (`git status` empty). `.artifacts/` screenshot
   evidence is gitignored and remains untracked.
 - No remote configured, nothing pushed or deployed.
+
+---
+---
+
+# PART II — PHASE 6.4: AUTONOMOUS CREATIVE-ENGINEERING TOOLKIT, MCP DISCOVERY & COMPONENT-MARKETPLACE INTEGRATION
+
+**Mission:** Discover and verify the agent's MCP / component-marketplace environment,
+install only the justified, compatible subset, integrate it into the existing Nunatak
+cockpit against **real** data, validate with gates + before/after screenshots, and report
+deliverables and honest blockers. The objective is a **reliable** environment — not the
+maximum number of connected servers — without sacrificing quality, security, performance
+or correctness.
+**Baseline:** `5fa1b4b` (Part I). **Mode:** autonomous, stopping at auth/paid/permission
+boundaries rather than simulating them.
+
+---
+
+## 13. Verified MCP inventory (what is actually connected vs. reported-blocked)
+
+Nothing was installed or claimed without a verification step. Findings:
+
+| Candidate | Status | Verified reason |
+| --- | --- | --- |
+| `browser-use` (17 tools) | ✅ **Connected** | Present in this agent's MCP set; source `user`. |
+| `genui` (2 tools) | ✅ **Connected** | Present in this agent's MCP set; source `user`. |
+| Any user-added MCP server | — **None** | `mcp.json` → `"mcpServers": {}` (inspected; no credentials present or exposed). |
+| **shadcn MCP** | ⛔ **Blocked (double)** | Official registry entry exists, but shadcn requires **Tailwind + `components.json`** — neither is present in this app (hand-rolled CSS system, 0 config files). Adding it would force a full re-platform, not an add-on. Not installed. |
+| **Playwright MCP** | ⛔ **Not added** | Official, but it **duplicates** the already-connected `browser-use`. Adding a second browser engine was rejected as redundant. |
+| **Figma MCP** | ⛔ **Auth boundary** | Requires a Figma account, file access and a personal access token — a login/permission boundary. Not attempted; not claimed. |
+| Context7 / 21st.dev (Magic UI) / Tremor / Recharts MCP / Flowbite / Storybook / Penpot / Better-Design | ⛔ **Not found as directly-installable here** | No verified, installable MCP server surfaced in this agent's environment without a manual IDE-marketplace action and/or API key. Reported as unavailable rather than pretended-installed. |
+| Image / video / 3D / creative (Runway, Luma, fal.ai, Replicate, FLUX, Recraft, Kling, Pika, Krea, Blender, Meshy, Tripo, Canva, Webflow, Framer) | ⛔ **Out of scope** | Paid and/or auth-gated, **and** irrelevant to a data-dense operations dashboard. The brief itself warns against decorative generated media on such a surface. Deliberately not pursued. |
+| **Official MCP Registry** (`registry.modelcontextprotocol.io`) | ℹ️ **Referenced** | Used as the source of truth to confirm which candidate servers are real/official before judging them. |
+
+**Hard boundary reached:** adding *any* marketplace MCP in this IDE requires a manual
+marketplace action and, for most, an API key / paid plan. Per the mission's security rule,
+work stopped at that boundary and is reported honestly instead of being simulated.
+
+---
+
+## 14. Dependency inventory — installed, and declined-with-reason
+
+The existing app already ships a mature, honest design system and most §3 primitives, so
+the correct move was **surgical**: adopt only non-conflicting, MIT, React-19-compatible,
+style-agnostic libraries that fill a genuine gap.
+
+### Installed (both verified before install)
+
+| Package | Version | License | React 19 peer | Tailwind needed? | Why (genuine gap filled) |
+| --- | --- | --- | --- | --- | --- |
+| `cmdk` | **1.1.1** | MIT | `^18 \|\| ^19` ✅ | No | **No command palette existed** anywhere in the app. cmdk is the accessible typeahead listbox engine that *powers shadcn's own `Command`* — the real component, adopted without adopting the styling system. |
+| `motion` | **14.6.0** | MIT | `^18 \|\| ^19` ✅ | No | Intentional, restrained motion: route transitions + palette enter/exit, with a single global `MotionConfig reducedMotion="user"` gate. |
+
+- `npm install cmdk@^1.1.1 motion@^14.6.0` added **30 packages** (mostly transitive).
+- **`npm audit`: 3 findings — all pre-existing and dev-only** (1 moderate `@vitest/mocker`,
+  2 critical `tinypool`), reachable only through the test runner. **Neither cmdk nor motion
+  introduced any advisory.** The only fix is a breaking `vitest@5` major, which is out of
+  scope for this phase and was intentionally not taken.
+
+### Declined — with documented reasons (no competing systems, no duplicate engines)
+
+| Rejected | Reason |
+| --- | --- |
+| **Tailwind + shadcn/ui** | Would introduce a *second, competing* styling system and requires retrofitting Tailwind/`components.json` onto a mature bespoke-token app — destabilising, contrary to "don't create competing systems / don't overwrite working components". |
+| **Recharts / ECharts** | The backend exposes **no time-series** (gap G4). A charting library would be a *duplicate engine with no honest data* to feed curves. Existing bespoke CSS bars/gauges already visualise the real census. |
+| **TanStack Table** | Over-engineered for the current exact-match, server-cursor-paginated list; would add weight without a real need. |
+| **Geist font** | Would regress the established **Space Grotesk / Inter / JetBrains Mono** identity. |
+| **lucide-react** | The app already ships a bespoke ~38-icon inline-SVG set in the Lucide idiom; adding the package duplicates icons already in use. |
+
+---
+
+## 15. Reusable design-system spec (unchanged source of truth)
+
+- `theme/tokens.css` remains the single token authority. **No new tokens were invented.**
+- The new `shell/command.css` is composed **entirely from existing tokens**: `--fx-r-lg`
+  (panel radius), `--fx-shadow-pop` (elevation), the `--fx-sp-*` spacing scale,
+  `--fx-accent-soft` (active item), `--fx-dur-*` / easing, and the status tones reused via
+  `StatusBadge`. The palette therefore belongs to this system rather than looking bolted-on.
+- **Reduced motion** is honoured twice over: the pre-existing blanket CSS rule (durations +
+  delays → 0) *and* `<MotionConfig reducedMotion="user">` wrapping the provider tree.
+
+---
+
+## 16. Component list — created vs. reused
+
+**Created (3 files):**
+- `web/src/shell/CommandMenu.tsx` — the ⌘K / Ctrl+K palette (cmdk + Motion). Every entry is
+  real: 6 fixed routes, 2 genuine global actions (New workflow → the existing create dialog;
+  Present an API key → Settings), and the 8 most-recent workflows read from the **same**
+  `useWorkflows({ limit: 8 })` query the Overview already uses (react-query dedupes the key).
+- `web/src/shell/command.css` — token-themed palette styling + the topbar trigger chip.
+- `web/src/shell/CommandMenu.test.tsx` — 4 integration tests (mocked `useWorkflows` with
+  real-shape fixtures under `MemoryRouter`): renders routes+fixtures, closes+navigates on a
+  route, navigates to a real workflow detail, and fires the New-workflow action.
+
+**Reused, deliberately not duplicated:** `StatusBadge`, `RelTime`, `truncate`, `useWorkflows`,
+the bespoke icon set, the `createPortal` modal pattern, and all design tokens.
+
+**Modified (integration only):**
+- `web/src/shell/Shell.tsx` — Ctrl/Cmd+K toggle, topbar "Commands ⌘K" trigger chip
+  (`aria-haspopup="dialog"`), a Motion `AnimatePresence` route transition around `<Outlet>`,
+  and mounting `<CommandMenu/>`.
+- `web/src/App.tsx` — `<MotionConfig reducedMotion="user">` around the provider tree.
+- `web/src/test/setup.ts` — no-op `Element.prototype.scrollIntoView` polyfill (jsdom lacks it;
+  cmdk scrolls the active option on mount).
+
+**Honesty note:** the palette footer states *"Client-side filter over the N most-recent
+workflows — not a server search"*, because the API's only text filter is exact `business_key`.
+No fake fuzzy server search is implied.
+
+---
+
+## 17. Visual-asset manifest & licensing
+
+- **No new binary assets were added.** No images, video, 3D, or icon fonts.
+- Fonts unchanged: Inter, JetBrains Mono, Space Grotesk — all **SIL OFL 1.1**.
+- Icons: existing hand-authored inline-SVG set (Lucide idiom, original work) — no new license.
+- New runtime dependencies and their licenses: **cmdk (MIT)**, **motion (MIT)** — code only,
+  they ship no image assets.
+- `.artifacts/` screenshots are generated evidence, **gitignored**, never committed.
+
+---
+
+## 18. Before/after screenshots + validation
+
+- **Before:** `.artifacts/baseline64/` (8 routes, real fixture data).
+- **After:** `.artifacts/after64/` — 8 routes **plus** `palette-open.png` and
+  `palette-filter.png`.
+- **Capture method (honest):** the Computer-Use browser path was **blocked** by its
+  URL-verification policy (the foreground Chrome tab was showing an unrelated third-party
+  site, so it refused to drive it — a correct safety gate). Rather than force it or fake the
+  evidence, capture was completed **deterministically** via Chrome DevTools Protocol on a
+  throwaway headless profile (`_capture_report.json`: all steps, **0 errors**), leaving the
+  user's real browser untouched.
+- **Observed in the after-images:** Overview KPIs render real values (**Total 6 / Completed 3
+  / Active 0 / Failed·Aborted 2 / Manual 1**) — identical to baseline, i.e. **no regression**;
+  the new "⌘K Commands" chip is present in the topbar; the palette opens with Navigate (6
+  routes) + Actions + Recent-workflows (6) groups; typing `conf` correctly fuzzy-narrows
+  Navigate to Settings while the recent rows remain (a legitimate cmdk subsequence match on
+  `…compe**n**sate … **f**…`), each row showing a real status badge + relative time.
+- **Selector caveat:** the CDP probe reported `items≈0` only because it queried the wrong
+  class (`cmdk-item`); the screenshots and the group count (`groups=3`) confirm items render.
+  Reported rather than glossed over.
+
+---
+
+## 19. Gates, performance and remaining boundaries
+
+**Gates (from `web/`):**
+- **Build** `npm run build` (`tsc -b && vite build`, the authoritative type-check): ✅ built;
+  **729 modules** (up from 253), JS `778.96 kB` / **gzip `242.65 kB`** (was ~585 kB / 179 kB).
+  The ~64 kB gzip delta is **Motion's** cost, accepted as the price of real transitions.
+  Pre-existing single-bundle chunk-size advisory only (no code-splitting configured).
+- **Lint** `npm run lint`: ✅ **0 errors / 10 warnings** — all pre-existing
+  `react-refresh/only-export-components`; no new error class.
+- **Tests** `npm run test`: ✅ **34/34** across 7 files (+4 new CommandMenu tests).
+- **No stray `.js`** emitted into `src/` (verified).
+
+**Remaining honest boundaries / gaps:**
+- **No marketplace MCP could be added** in this environment without a manual IDE-marketplace
+  action and/or paid/API-key credential — stopped at that boundary (§13).
+- **G2 / G4 data gaps** persist → no invented trends, sparklines, or global event stream.
+- **True mobile/tablet screenshots** (1280/1024/768/390) still not captured — headless window
+  is ~1536 px; responsive layouts rest on the preserved/extended CSS, not fresh pixel evidence.
+- **`/metrics` hard-load** returns raw Prometheus text via the Vite proxy (SPA renders on
+  client-side nav) — environment behaviour, not a frontend defect.
+- **npm-audit dev advisories** (vitest/tinypool) left as-is; fixing requires a breaking
+  `vitest@5` major outside this phase's scope.
+
+---
+
+## 20. Part II commit status
+
+- Confined to `E:\Projects\fathom-workflow`, branch `main`, directly on top of `5fa1b4b`.
+- **Exactly one** new local commit for this phase: the cmdk + motion dependency additions,
+  the 3 new files, the 3 integration edits, and this Part II report.
+- **No remote, no push, no deploy.** `.artifacts/` (screenshots + CDP capture script/report)
+  is gitignored and stays untracked.
+- Author/committer set **per-commit** via `git -c` to `Lakhyajit Changmai <lakhya911@gmail.com>`;
+  no git config modified.

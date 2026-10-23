@@ -2,8 +2,9 @@
    truth, global actions. The status cluster reports only what the probes and the
    presented key actually establish right now — never a decorative "all systems
    go", never a fake bell, account menu or theme switch that has no backend. */
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
 import { useHealthz, useMetrics, useReadyz } from "../api/hooks";
 import { gaugeValue } from "../api/prom";
@@ -21,6 +22,7 @@ import {
   IconX,
 } from "../icons";
 import { CreateWorkflowModal } from "../components/CreateWorkflowModal";
+import { CommandMenu } from "./CommandMenu";
 import { useSettings } from "../state/settings";
 import "./shell.css";
 
@@ -36,8 +38,10 @@ const NAV = [
 export function Shell() {
   const [navOpen, setNavOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [palette, setPalette] = useState(false);
   const [q, setQ] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const settings = useSettings();
   const readyz = useReadyz();
   const healthz = useHealthz();
@@ -57,6 +61,18 @@ export function Shell() {
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       e.preventDefault();
       searchRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    // ⌘K / Ctrl+K toggles the command menu (works from anywhere, even a field).
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPalette((v) => !v);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -156,6 +172,11 @@ export function Shell() {
             <kbd aria-hidden="true">/</kbd>
           </form>
           <div className="fx-topbar__actions">
+            <button type="button" className="btn btn-sm fx-cmd__trigger" onClick={() => setPalette(true)} aria-label="Open command menu" aria-haspopup="dialog">
+              <IconSearch size={13} />
+              <span className="fx-cmd__trigger-label">Commands</span>
+              <kbd aria-hidden="true">⌘K</kbd>
+            </button>
             <span className={`fx-role fx-role--${role ?? "none"}`} title={role ? `Presented key acts with the ${role} role` : "No API key presented"}>
               <span className="fx-role__avatar" aria-hidden="true">{role ? roleLabel.charAt(0) : "?"}</span>
               <span className="fx-role__text">
@@ -180,10 +201,22 @@ export function Shell() {
         )}
 
         <main id="fx-main" className="fx-main" tabIndex={-1}>
-          <Outlet />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              className="fx-route"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.22, 0.61, 0.21, 1] }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 
+      <CommandMenu open={palette} onClose={() => setPalette(false)} onNewWorkflow={() => setCreating(true)} />
       {creating && <CreateWorkflowModal onClose={() => setCreating(false)} />}
     </div>
   );

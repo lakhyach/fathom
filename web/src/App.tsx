@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router";
+import { MotionConfig } from "motion/react";
 
 import { ApiProvider } from "./state/api";
 import { SettingsProvider } from "./state/settings";
@@ -15,25 +16,27 @@ import { NotFound } from "./screens/NotFound";
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <ApiProvider>
-        <ToastProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route element={<Shell />}>
-                <Route index element={<Overview />} />
-                <Route path="workflows" element={<Workflows />} />
-                <Route path="workflows/:id" element={<WorkflowDetail />} />
-                <Route path="dlq" element={<Dlq />} />
-                <Route path="events" element={<Events />} />
-                <Route path="metrics" element={<Metrics />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </ToastProvider>
-      </ApiProvider>
-    </SettingsProvider>
+    <MotionConfig reducedMotion="user">
+      <SettingsProvider>
+        <ApiProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route element={<Shell />}>
+                  <Route index element={<Overview />} />
+                  <Route path="workflows" element={<Workflows />} />
+                  <Route path="workflows/:id" element={<WorkflowDetail />} />
+                  <Route path="dlq" element={<Dlq />} />
+                  <Route path="events" element={<Events />} />
+                  <Route path="metrics" element={<Metrics />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </ToastProvider>
+        </ApiProvider>
+      </SettingsProvider>
+    </MotionConfig>
   );
 }

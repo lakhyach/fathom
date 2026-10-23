@@ -1,0 +1,213 @@
+/* Command menu (⌘K) — cmdk is style-agnostic, so the palette is themed
+   entirely with the existing Nunatak tokens. It reuses the modal scrim
+   convention and panel surface so it reads as part of the same system. */
+
+.fx-cmd__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh var(--fx-sp-4) var(--fx-sp-4);
+  background: oklch(0.12 0.02 265 / 0.62);
+  backdrop-filter: blur(2px);
+}
+.fx-cmd__panel {
+  width: min(620px, 100%);
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--fx-hair) solid var(--fx-line-strong);
+  border-radius: var(--fx-r-lg);
+  background: linear-gradient(180deg, var(--fx-panel-raised), var(--fx-panel));
+  box-shadow: var(--fx-shadow-pop);
+}
+
+/* search input row */
+.fx-cmd__search {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-3);
+  padding: var(--fx-sp-3) var(--fx-sp-4);
+  border-bottom: var(--fx-hair) solid var(--fx-line-faint);
+  color: var(--fx-ink-faint);
+}
+.fx-cmd__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--fx-ink);
+  font-size: var(--fx-fs-body);
+  outline: none;
+}
+.fx-cmd__input::placeholder {
+  color: var(--fx-ink-faint);
+}
+.fx-cmd__hint {
+  flex: none;
+}
+.fx-cmd__hint kbd {
+  font-family: var(--fx-font-mono);
+  font-size: var(--fx-fs-micro);
+  padding: 2px 6px;
+  border: var(--fx-hair) solid var(--fx-line);
+  border-radius: var(--fx-r-sm);
+  background: var(--fx-inset);
+  color: var(--fx-ink-muted);
+}
+
+/* the scrollable result list (cmdk injects its own wrapper; we theme it) */
+.fx-cmd__command {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.fx-cmd__list {
+  padding: var(--fx-sp-2);
+  overflow: auto;
+  min-height: 0;
+  max-height: calc(min(70vh, 560px) - 62px);
+  outline: none;
+}
+.fx-cmd__group {
+  margin-bottom: var(--fx-sp-2);
+}
+.fx-cmd__group + .fx-cmd__group {
+  border-top: var(--fx-hair) solid var(--fx-line-faint);
+  padding-top: var(--fx-sp-2);
+}
+.fx-cmd__group-heading {
+  padding: 6px var(--fx-sp-3) 4px;
+  font-size: var(--fx-fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fx-ink-faint);
+}
+.fx-cmd__empty {
+  padding: var(--fx-sp-6) var(--fx-sp-4);
+  text-align: center;
+  color: var(--fx-ink-muted);
+  font-size: var(--fx-fs-small);
+}
+
+.fx-cmd__item {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-3);
+  width: 100%;
+  padding: 9px var(--fx-sp-3);
+  border-radius: var(--fx-r-sm);
+  color: var(--fx-ink-secondary);
+  font-size: var(--fx-fs-body);
+  cursor: pointer;
+  user-select: none;
+}
+.fx-cmd__item[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* cmdk marks the active option via [data-active] */
+.fx-cmd__item[data-active] {
+  background: var(--fx-accent-soft);
+  color: var(--fx-ink);
+}
+.fx-cmd__item[data-active] .fx-cmd__chev {
+  opacity: 1;
+  transform: none;
+}
+.fx-cmd__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--fx-r-sm);
+  background: var(--fx-inset);
+  border: var(--fx-hair) solid var(--fx-line-faint);
+  color: var(--fx-blue-bright);
+}
+.fx-cmd__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fx-cmd__label {
+  font-weight: 560;
+  color: var(--fx-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fx-cmd__sub {
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fx-cmd__id {
+  font-family: var(--fx-font-mono);
+}
+.fx-cmd__chev {
+  flex: none;
+  color: var(--fx-ink-faint);
+  opacity: 0;
+  transform: translateX(-2px);
+  transition: opacity var(--fx-dur-fast) var(--fx-ease), transform var(--fx-dur-fast) var(--fx-ease);
+}
+
+/* footer legend */
+.fx-cmd__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-4);
+  padding: var(--fx-sp-2) var(--fx-sp-4);
+  border-top: var(--fx-hair) solid var(--fx-line-faint);
+  background: var(--fx-inset);
+  color: var(--fx-ink-faint);
+  font-size: var(--fx-fs-caption);
+}
+.fx-cmd__foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fx-cmd__foot kbd {
+  font-family: var(--fx-font-mono);
+  font-size: var(--fx-fs-micro);
+  padding: 1px 5px;
+  border: var(--fx-hair) solid var(--fx-line);
+  border-radius: var(--fx-r-sm);
+  background: var(--fx-panel);
+  color: var(--fx-ink-muted);
+}
+.fx-cmd__foot .grow {
+  margin-left: auto;
+}
+
+/* topbar trigger chip */
+.fx-cmd__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fx-cmd__trigger kbd {
+  font-family: var(--fx-font-mono);
+  font-size: var(--fx-fs-micro);
+  padding: 1px 5px;
+  border: var(--fx-hair) solid var(--fx-line);
+  border-radius: var(--fx-r-sm);
+  background: var(--fx-inset);
+  color: var(--fx-ink-muted);
+}
+@media (max-width: 720px) {
+  .fx-cmd__trigger-label {
+    display: none;
+  }
+}
