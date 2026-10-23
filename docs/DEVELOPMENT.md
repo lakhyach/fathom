@@ -20,19 +20,30 @@ on Windows and Linux with **no C toolchain** and **no ambiguity about versions**
 | staticcheck | **v0.8.2** | Linter, run via `go run honnef.co/go/tools/cmd/staticcheck@v0.8.2` (see `task lint`) — no separate install needed. |
 | Docker Engine + Compose v2 | Engine 29.x, Compose v5.5+ | Only needed for the optional CDC smoke test (§6). |
 
-The product module has exactly **one** direct dependency: `github.com/google/uuid`
-(ADR-018). Everything else is the Go standard library. The heavier dependency
-graph (franz-go, pgx, otel, prometheus, chi, testcontainers) lives in the
-**separate `tools/` module** so it never enters product builds — see §7.
+In the Phase-3 foundation the product module had exactly **one** direct
+dependency: `github.com/google/uuid` (ADR-018). From **Phase 4** the durable
+PostgreSQL store adds two direct, pinned dependencies to the product module, as
+ADR-008 mandates: `github.com/jackc/pgx/v5` **v5.11.0** (pool + the `stdlib`
+driver the migrator wraps) and `github.com/golang-migrate/migrate/v4` **v4.20.1**
+(embedded, versioned migrations). Both are pure Go, so `CGO_ENABLED=0` product
+builds still hold (Platform strategy, below). Everything else is the Go standard library, and the
+remaining heavier graph (franz-go, otel, prometheus, chi, testcontainers) still
+lives in the **separate `tools/` module** so it never enters product builds —
+see §7. `testcontainers-go` is deliberately **not** a product dependency; the
+integration tier runs against a disposable PostgreSQL container started
+out-of-band (see `docs/PHASE_4_VALIDATION_REPORT.md`).
 
 ### Platform strategy
 - Development and ordinary CI build/test with **`CGO_ENABLED=0`** (ADR-004/005).
   The whole product stack is pure Go, so it builds on Windows without gcc and
   cross-compiles for Linux cleanly.
 - Supported targets: `windows/amd64` (dev host), `linux/amd64`, `linux/arm64`.
-- `go test -race` **requires cgo/gcc** and therefore only runs on Linux (CI).
-  On the Windows dev host it is expected to report
-  `go: -race requires cgo` — that is a documented BLOCKED-on-host case, not a failure.
+- `go test -race` **requires cgo/gcc** and therefore cannot run on the Windows
+  dev host directly (it reports `go: -race requires cgo` — a documented
+  BLOCKED-on-host case, not a failure). It runs on native Linux: on CI, and
+  locally via a Linux container (Phase 4 validated with `golang:1.26.5-bookworm`,
+  which ships gcc). A Windows cross-compile is **not** a substitute for this —
+  see `docs/PHASE_4_VALIDATION_REPORT.md` §Race.
 
 ---
 
@@ -172,9 +183,13 @@ job, so CI cannot drift from these docs.
 cmd/fathom/          minimal, compilable entry point (signal ctx -> config -> logger -> app.Run)
 internal/config/     env-only loading + Secret redaction + Problems errors
 internal/logging/    slog JSON logger + key-scrubbing redact handler
-internal/id/         UUIDv7 wrapper (product's only external dep: google/uuid)
+internal/id/         UUIDv7 wrapper (depends only on google/uuid, ADR-018)
 internal/app/        Component interface + context-aware, bounded graceful shutdown
 internal/hygiene/    build-time guards: no committed secrets / formatting regressions
+internal/engine/     PURE deterministic state machine — no I/O, no wall clock (SM §2/§3/§5)
+internal/store/      postgres: durable transactions, optimistic lock, outbox, dedup,
+                     idempotent create (pgx/v5 + golang-migrate, ADR-008/009/011)
+db/                  embedded versioned migrations (FS consumed by internal/store/postgres)
 tools/               SEPARATE go module (github.com/Lakhyajit-96/fathom/tools) — NOT product deps:
   portprobe/           blank-import CGO portability matrix (ADR-005 evidence)
   kafkasmoke/          franz-go round-trip verifier used by the CDC smoke
