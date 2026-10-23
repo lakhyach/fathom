@@ -31,6 +31,58 @@
   border-color: oklch(0.78 0.13 95 / 0.4);
 }
 
+/* ---- readiness pill (Overview) — colour never travels alone; text label carries it ---- */
+.fx-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fx-fs-caption);
+  font-weight: 600;
+  padding: 4px 12px 4px 10px;
+  border-radius: var(--fx-r-pill);
+  border: var(--fx-hair) solid var(--fx-line);
+  color: var(--fx-ink-muted);
+  background: var(--fx-panel);
+}
+.fx-health__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+.fx-health--pending { color: var(--fx-st-pending); }
+.fx-health--pending .fx-health__dot { animation: fx-pulse 1.4s var(--fx-ease) infinite; }
+.fx-health--completed { color: var(--fx-st-completed); border-color: oklch(0.77 0.14 178 / 0.4); }
+.fx-health--manual { color: var(--fx-st-manual); border-color: oklch(0.62 0.22 25 / 0.4); }
+.fx-health--negative { color: var(--fx-st-negative); border-color: oklch(0.66 0.19 15 / 0.4); }
+
+/* ---- degraded banner — impossible to miss when the control plane is not ready ---- */
+.fx-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fx-sp-3);
+  padding: var(--fx-sp-3) var(--fx-sp-4);
+  border-radius: var(--fx-r-md);
+  border: var(--fx-hair) solid var(--fx-line);
+  font-size: var(--fx-fs-small);
+  line-height: 1.5;
+}
+.fx-banner strong {
+  display: block;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+.fx-banner svg {
+  flex: none;
+  margin-top: 1px;
+}
+.fx-banner--degraded {
+  color: var(--fx-st-manual);
+  border-color: oklch(0.62 0.22 25 / 0.4);
+  background: oklch(0.62 0.22 25 / 0.08);
+}
+
 /* ---- stat cards ---- */
 .fx-stats {
   display: grid;
@@ -236,42 +288,47 @@
   color: var(--fx-ink-faint);
 }
 
-/* ---- detail (inspector) ---- */
-.fx-detail-head {
+/* ---- execution header ---- */
+.fx-exec-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--fx-sp-4);
   flex-wrap: wrap;
 }
-.fx-detail-title {
+.fx-exec-head__main {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
-.fx-detail-title h1 {
+.fx-exec-head__side {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-2);
+  flex: none;
+}
+.fx-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-faint);
+}
+.fx-exec-title {
   display: flex;
   align-items: center;
   gap: var(--fx-sp-3);
   font-size: var(--fx-fs-title);
   flex-wrap: wrap;
+  margin: 0;
 }
-.fx-detail-title .fx-crumb {
-  font-size: var(--fx-fs-caption);
-  color: var(--fx-ink-faint);
-}
-.fx-detail-actions {
+.fx-exec-meta {
   display: flex;
-  gap: var(--fx-sp-2);
-  flex-wrap: wrap;
-}
-
-.fx-detail-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
   gap: var(--fx-sp-4);
-  align-items: start;
+  flex-wrap: wrap;
+  font-size: var(--fx-fs-small);
+  color: var(--fx-ink-secondary);
 }
 
 .fx-meta-list {
@@ -622,7 +679,6 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .fx-grid-2,
-  .fx-detail-grid,
   .fx-settings-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -643,9 +699,6 @@
   .fx-tl__scale {
     padding-left: 148px;
     padding-right: 76px;
-  }
-  .fx-detail-actions {
-    width: 100%;
   }
 }
 @media (max-width: 520px) {
@@ -755,23 +808,262 @@
   flex-wrap: wrap;
 }
 
-/* ---- execution inspector ---- */
-.fx-detail-side {
-  display: flex;
-  flex-direction: column;
+/* ---- execution inspector: KPI strip ---- */
+.fx-inspector {
   gap: var(--fx-sp-4);
 }
-.fx-graphwrap {
+.fx-kpi {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--fx-sp-3);
+}
+.fx-kpi__err {
+  grid-column: 1 / -1;
+}
+.fx-kpi__card {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-3);
+  padding: var(--fx-sp-3) var(--fx-sp-4);
+  border: var(--fx-hair) solid var(--fx-line);
+  border-radius: var(--fx-r-md);
+  background: linear-gradient(180deg, var(--fx-panel-raised), var(--fx-panel));
+  box-shadow: var(--fx-shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--fx-dur-fast) var(--fx-ease), border-color var(--fx-dur-fast) var(--fx-ease);
+}
+.fx-kpi__card:hover {
+  transform: translateY(-1px);
+  border-color: var(--fx-line-strong);
+}
+.fx-kpi__card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: currentColor;
+  opacity: 0.45;
+}
+.fx-kpi__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--fx-r-sm);
+  background: var(--fx-inset);
+  border: var(--fx-hair) solid var(--fx-line-faint);
+}
+.fx-kpi__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fx-kpi__v {
+  font-size: 22px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--fx-ink);
+}
+.fx-kpi__card--neutral .fx-kpi__icon { color: var(--fx-blue-bright); }
+.fx-kpi__card--neutral::before { color: var(--fx-blue-bright); }
+.fx-kpi__card--completed .fx-kpi__icon { color: var(--fx-st-completed); }
+.fx-kpi__card--completed::before { color: var(--fx-st-completed); }
+.fx-kpi__card--running .fx-kpi__icon { color: var(--fx-st-running); }
+.fx-kpi__card--running::before { color: var(--fx-st-running); }
+.fx-kpi__card--negative .fx-kpi__icon { color: var(--fx-st-negative); }
+.fx-kpi__card--negative::before { color: var(--fx-st-negative); }
+.fx-kpi__card--manual .fx-kpi__icon { color: var(--fx-st-manual); }
+.fx-kpi__card--manual::before { color: var(--fx-st-manual); }
+
+/* ---- execution inspector: two-column shell ---- */
+.fx-insp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: var(--fx-sp-4);
   align-items: start;
 }
-.fx-graph-side {
+.fx-insp-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-4);
+  min-width: 0;
+}
+.fx-insp-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-4);
+  position: sticky;
+  top: var(--fx-sp-4);
+}
+.fx-graphpanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-3);
+}
+
+/* ---- graph progress bar ---- */
+.fx-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fx-progress__bar {
+  height: 6px;
+  border-radius: var(--fx-r-pill);
+  background: var(--fx-inset);
+  overflow: hidden;
+  border: var(--fx-hair) solid var(--fx-line-faint);
+}
+.fx-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fx-gradient-accent);
+  transition: width var(--fx-dur) var(--fx-ease);
+}
+.fx-progress__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--fx-sp-3);
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-muted);
+  flex-wrap: wrap;
+}
+.fx-progress__pct {
+  color: var(--fx-ink);
+  font-weight: 600;
+}
+.fx-progress__el {
+  margin-left: auto;
+  color: var(--fx-ink-faint);
+}
+
+/* ---- accessible step rail: layout wrapper only. The .fx-rail-step*
+   definitions live once in graph.css (the graph owns the node/rail look). */
+.fx-rail-wrap {
   display: flex;
   flex-direction: column;
   gap: var(--fx-sp-2);
 }
+
+/* ---- lower operations panels ---- */
+.fx-lower {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--fx-sp-4);
+  align-items: start;
+}
+
+/* ---- event log panel ---- */
+.fx-log {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.fx-log__row {
+  display: grid;
+  grid-template-columns: 68px 78px minmax(0, 1fr);
+  gap: var(--fx-sp-2);
+  align-items: baseline;
+  padding: 7px var(--fx-sp-4);
+  border-bottom: var(--fx-hair) solid var(--fx-line-faint);
+  font-size: var(--fx-fs-caption);
+}
+.fx-log__row:last-child {
+  border-bottom: none;
+}
+.fx-log__time {
+  color: var(--fx-ink-faint);
+}
+.fx-log__lvl {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: var(--fx-fs-micro);
+}
+.fx-log__lvl--completed { color: var(--fx-st-completed); }
+.fx-log__lvl--running { color: var(--fx-st-running); }
+.fx-log__lvl--compensating { color: var(--fx-st-compensating); }
+.fx-log__lvl--negative { color: var(--fx-st-negative); }
+.fx-log__lvl--manual { color: var(--fx-st-manual); }
+.fx-log__lvl--warn { color: var(--fx-st-warn); }
+.fx-log__lvl--pending { color: var(--fx-st-pending); }
+.fx-log__msg {
+  color: var(--fx-ink-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fx-log__code {
+  margin-left: var(--fx-sp-2);
+  color: var(--fx-ink-faint);
+}
+
+/* ---- execution metrics ---- */
+.fx-exec-metrics {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.fx-exec-metrics__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--fx-sp-3);
+  padding: 8px 0;
+  border-bottom: var(--fx-hair) solid var(--fx-line-faint);
+  font-size: var(--fx-fs-small);
+}
+.fx-exec-metrics__row:last-child {
+  border-bottom: none;
+}
+.fx-exec-metrics__k {
+  color: var(--fx-ink-faint);
+}
+.fx-exec-metrics__v {
+  color: var(--fx-ink);
+  font-weight: 600;
+}
+
+/* ---- traces tab ---- */
+.fx-traces {
+  padding: var(--fx-sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-3);
+}
+.fx-traces__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-2);
+}
+.fx-traces__row {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-3);
+  flex-wrap: wrap;
+  padding: var(--fx-sp-2) var(--fx-sp-3);
+  border: var(--fx-hair) solid var(--fx-line-faint);
+  border-radius: var(--fx-r-sm);
+  background: var(--fx-inset);
+  font-size: var(--fx-fs-caption);
+}
+
+/* ---- selected table row + details json action ---- */
+.fx-row--on {
+  background: var(--fx-accent-soft);
+}
+.fx-row--on td:first-child {
+  box-shadow: inset 2px 0 0 var(--fx-blue);
+}
+.fx-details__json {
+  margin-top: var(--fx-sp-3);
+  width: 100%;
+  justify-content: center;
+}
+
 .fx-hintpick {
   font-size: var(--fx-fs-caption);
   color: var(--fx-ink-faint);
@@ -807,16 +1099,50 @@
   padding: var(--fx-sp-4);
 }
 
-@media (max-width: 1080px) {
-  .fx-graphwrap {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 @media (max-width: 520px) {
   .fx-probe-row {
     grid-template-columns: 110px minmax(0, 1fr) auto;
   }
   .fx-probe-row .btn {
     grid-column: 1 / -1;
+  }
+  .fx-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- inspector responsive overrides ----
+   These MUST come after the base .fx-kpi / .fx-insp-grid / .fx-insp-side /
+   .fx-lower rules above; media queries add no specificity, so source order is
+   the only thing that makes a breakpoint win over the desktop base rule. */
+@media (max-width: 1240px) {
+  .fx-kpi {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .fx-insp-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fx-insp-side {
+    position: static;
+  }
+  .fx-lower {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 780px) {
+  .fx-kpi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .fx-kpi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fx-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fx-insp-main,
+  .fx-insp-side {
+    min-width: 0;
   }
 }

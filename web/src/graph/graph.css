@@ -1,4 +1,4 @@
-/* React Flow chrome, restyled to the Fathom identity. The library's default
+/* React Flow chrome, restyled to the Nunatak identity. The library's default
    stylesheet is imported first; everything below re-tokens it so nothing looks
    like the stock template. Node tones reuse the shared status tokens. */
 @import "@xyflow/react/dist/style.css";
@@ -58,7 +58,7 @@
 }
 .fx-node--selected {
   border-color: var(--fx-blue);
-  box-shadow: 0 0 0 2px var(--fx-accent-soft), var(--fx-shadow-md);
+  box-shadow: var(--fx-glow-blue), var(--fx-shadow-md);
 }
 .fx-node::before {
   content: "";
@@ -158,7 +158,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 440px;
+  max-height: 260px;
   overflow: auto;
 }
 .fx-rail-step {
@@ -178,11 +178,13 @@
 }
 .fx-rail-step:hover {
   background: var(--fx-accent-softer);
+  border-color: var(--fx-line-strong);
 }
 .fx-rail-step--on {
   border-color: var(--fx-blue);
   background: var(--fx-accent-soft);
   color: var(--fx-ink);
+  box-shadow: var(--fx-glow-blue);
 }
 .fx-rail-step__idx {
   flex: none;

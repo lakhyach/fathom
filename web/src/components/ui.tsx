@@ -1,4 +1,4 @@
-/* Shared Fathom UI primitives. Bespoke, token-driven, accessible.
+/* Shared Nunatak UI primitives. Bespoke, token-driven, accessible.
    Every control is a real semantic element; every badge pairs colour with
    text; every list has honest loading/empty/error/disconnected states. */
 import {

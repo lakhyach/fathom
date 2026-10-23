@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Nunatak">
+  <defs>
+    <linearGradient id="nk" x1="6" y1="6" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5b8cff" />
+      <stop offset="1" stop-color="#a273ff" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="32" height="32" rx="8" fill="#0a0f1e" />
+  <g fill="none" stroke="url(#nk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 24 16 6 26 24" />
+    <path d="M11 24 16 15 21 24" opacity="0.4" />
+  </g>
+  <g fill="url(#nk)">
+    <circle cx="16" cy="6" r="2.4" />
+    <circle cx="6" cy="24" r="2.1" />
+    <circle cx="26" cy="24" r="2.1" />
+  </g>
+</svg>

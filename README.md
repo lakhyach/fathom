@@ -1,4 +1,8 @@
-# Fathom (internal codename)
+# Nunatak — workflow control plane
+
+*(Internal codename **Fathom**; the Go module path, `fathom` binary/modes and
+`fathom_*` metric series intentionally keep that name — “Nunatak” is the visible
+product name for the operations cockpit.)*
 
 A distributed **workflow control plane** with a real-time operations cockpit: observable,
 recoverable workflow execution with verifiable failure handling.
@@ -29,7 +33,7 @@ cmd/fathom/    ONE binary, modes: control | worker | relay | all       (Phase 5)
 internal/      engine, store, worker, scheduler, relay, api, health, metrics, tracing (Phase 5)
 db/            embedded versioned migrations 0001–0002                 (Phase 4–5)
 deploy/        docker compose smoke (Kafka+Debezium CDC proof)         (Phase 3)
-web/           cockpit (React SPA)                                     (later phase — not started)
+web/           operations cockpit (React SPA) — Vite + React 19 + React Flow   (Phases 6 & 6.1)
 tools/         separate module: CGO portability probe + franz-go round-trip smoke
 .github/workflows/  ci.yml + cdc-integration.yml (authored; run once a remote exists)
 ```

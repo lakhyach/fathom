@@ -1,10 +1,12 @@
-/* Cockpit shell: brand rail, navigation, connection truth, global actions.
-   The status cluster reports what the probes actually answer right now —
-   never a decorative "all systems go". */
+/* Cockpit shell: brand rail over bespoke alpine artwork, navigation, connection
+   truth, global actions. The status cluster reports only what the probes and the
+   presented key actually establish right now — never a decorative "all systems
+   go", never a fake bell, account menu or theme switch that has no backend. */
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { useHealthz, useReadyz } from "../api/hooks";
+import { useHealthz, useMetrics, useReadyz } from "../api/hooks";
+import { gaugeValue } from "../api/prom";
 import {
   IconDeadLetter,
   IconEvents,
@@ -15,7 +17,7 @@ import {
   IconSearch,
   IconSettings,
   IconWorkflows,
-  FathomMark,
+  NunatakMark,
   IconX,
 } from "../icons";
 import { CreateWorkflowModal } from "../components/CreateWorkflowModal";
@@ -39,10 +41,12 @@ export function Shell() {
   const settings = useSettings();
   const readyz = useReadyz();
   const healthz = useHealthz();
+  const metrics = useMetrics();
 
   const reachable = !healthz.isError && !healthz.isLoading;
   const ready = readyz.data?.status === "ready";
   const readyReason = readyz.data?.status === "unavailable" ? readyz.data.reason : undefined;
+  const leases = metrics.data ? gaugeValue(metrics.data, "fathom_worker_leases_held") : null;
 
   const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -69,15 +73,18 @@ export function Shell() {
     setQ("");
   };
 
+  const role = settings.key?.role;
+  const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : "No key";
+
   return (
     <div className="fx-shell">
       <a className="skip-link" href="#fx-main">Skip to content</a>
 
       <header className={`fx-rail ${navOpen ? "fx-rail--open" : ""}`}>
         <div className="fx-rail__brand">
-          <FathomMark size={26} />
+          <NunatakMark size={30} />
           <div className="fx-rail__brand-text">
-            <span className="fx-rail__name">Fathom</span>
+            <span className="fx-rail__name">Nunatak</span>
             <span className="fx-rail__tag">Workflow Orchestration</span>
           </div>
           <button type="button" className="fx-rail__close btn btn-ghost btn-sm" onClick={() => setNavOpen(false)} aria-label="Close navigation">
@@ -101,25 +108,30 @@ export function Shell() {
         </nav>
 
         <div className="fx-rail__foot">
-          <div className={`fx-conn ${reachable ? (ready ? "fx-conn--ready" : "fx-conn--degraded") : "fx-conn--down"}`} role="status">
-            <span className="fx-conn__dot" aria-hidden="true" />
-            <div className="fx-conn__text">
+          <div className={`fx-engine ${reachable ? (ready ? "fx-engine--ready" : "fx-engine--degraded") : "fx-engine--down"}`} role="status">
+            <div className="fx-engine__top">
+              <span className="fx-engine__dot" aria-hidden="true" />
               <strong>{!reachable ? "Control plane offline" : ready ? "Engine healthy" : "Engine degraded"}</strong>
-              <span>
-                {!reachable
-                  ? "start `fathom control` or check the proxy"
-                  : readyReason === "relay_lag"
-                    ? "readyz: relay lag over threshold"
-                    : readyReason === "db_unavailable"
-                      ? "readyz: database unreachable"
-                      : `readyz ${readyz.dataUpdatedAt ? "probed " + new Date(readyz.dataUpdatedAt).toLocaleTimeString() : "…"}`}
-              </span>
             </div>
+            <p className="fx-engine__detail">
+              {!reachable
+                ? "start `fathom control` or check the proxy"
+                : readyReason === "relay_lag"
+                  ? "readyz: relay lag over threshold"
+                  : readyReason === "db_unavailable"
+                    ? "readyz: database unreachable"
+                    : readyz.data?.status === "ready"
+                      ? "readyz: ready"
+                      : `readyz ${readyz.dataUpdatedAt ? "probed " + new Date(readyz.dataUpdatedAt).toLocaleTimeString() : "…"}`}
+            </p>
+            <p className="fx-engine__leases mono">
+              {leases === null ? "leases —" : `${leases} live step lease${leases === 1 ? "" : "s"}`}
+            </p>
           </div>
           <div className="fx-rail__meta">
             <span className="fx-rail__ver mono">v0.1.0 · local</span>
             <span className={`fx-rail__key ${settings.key ? "fx-rail__key--set" : ""}`}>
-              {settings.key ? `key: ${settings.key.label}${settings.key.role ? ` · ${settings.key.role}` : ""}` : "no key presented"}
+              {settings.key ? `key: ${settings.key.label}${role ? ` · ${role}` : ""}` : "no key presented"}
             </span>
           </div>
         </div>
@@ -138,13 +150,20 @@ export function Shell() {
               className="fx-search__input"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search workflow id (UUID) or business key (exact)…"
+              placeholder="Find a workflow by id or exact business key…"
               aria-label="Search workflows by id or exact business key"
             />
             <kbd aria-hidden="true">/</kbd>
           </form>
           <div className="fx-topbar__actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setCreating(true)}>
+            <span className={`fx-role fx-role--${role ?? "none"}`} title={role ? `Presented key acts with the ${role} role` : "No API key presented"}>
+              <span className="fx-role__avatar" aria-hidden="true">{role ? roleLabel.charAt(0) : "?"}</span>
+              <span className="fx-role__text">
+                <strong>{roleLabel}</strong>
+                <span>{settings.key ? settings.key.label : "present a key"}</span>
+              </span>
+            </span>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => setCreating(true)} aria-label="New workflow">
               <IconPlus size={14} />
               <span>New workflow</span>
             </button>

@@ -1,7 +1,7 @@
 /* Typed endpoint surface — every path/query/body mirrors handlers.go
    exactly (see docs/PHASE_6_SPEC_CHECKLIST.md §2). Screens import only
    from here; the client and validators stay under the hood. */
-import type { FathomClient } from "./client";
+import type { NunatakClient } from "./client";
 import {
   vActionResult,
   vAttempt,
@@ -46,8 +46,8 @@ export interface ListDlqParams {
 }
 
 export class Endpoints {
-  private c: FathomClient;
-  constructor(c: FathomClient) {
+  private c: NunatakClient;
+  constructor(c: NunatakClient) {
     this.c = c;
   }
 

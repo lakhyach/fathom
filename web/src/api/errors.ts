@@ -55,7 +55,7 @@ export class ConflictError extends ApiError {
 /** Transport failure: proxy down, backend asleep, request aborted upstream. */
 export class ConnectionError extends Error {
   readonly aborted: boolean;
-  constructor(message = "Cannot reach the Fathom API (is the control plane running?)") {
+  constructor(message = "Cannot reach the Nunatak API (is the control plane running?)") {
     super(message);
     this.name = "ConnectionError";
     this.aborted = false;

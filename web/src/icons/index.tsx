@@ -1,4 +1,4 @@
-/* Fathom iconography — hand-drawn on a 24px grid, 1.5px stroke, round caps.
+/* Nunatak iconography — hand-drawn on a 24px grid, 1.5px stroke, round caps.
    One system: quiet technical line icons, no third-party library.
    Every icon is aria-hidden by default; the surrounding control carries the
    accessible name. `title` opts into a labelled <svg> for standalone use. */
@@ -33,21 +33,22 @@ function Svg({ size = 16, title, children, ...rest }: IconProps) {
 
 /* ---- brand ---- */
 
-/** Fathom mark: a sounding line descending into depth layers. */
-export function FathomMark({ size = 24, ...rest }: IconProps) {
+/** Nunatak mark: a summit whose ridgeline vertices are orchestration nodes —
+   a peak that is simultaneously a three-node flow graph. */
+export function NunatakMark({ size = 24, ...rest }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...rest}>
-      <path
-        d="M12 2.5v19"
-        stroke="url(#fxg)"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path d="M12 2.5 5 7.5v4l7-3.5" stroke="url(#fxg)" strokeWidth="1.8" strokeLinejoin="round" fill="url(#fxgf)" fillOpacity="0.18" />
-      <path d="M4 15.5c2.4 1.8 4.6 1.8 7 0s4.6-1.8 7 0" stroke="url(#fxg)" strokeWidth="1.6" strokeLinecap="round" opacity="0.85" />
-      <path d="M4 19.5c2.4 1.8 4.6 1.8 7 0s4.6-1.8 7 0" stroke="url(#fxg)" strokeWidth="1.6" strokeLinecap="round" opacity="0.45" />
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true" {...rest}>
+      <g fill="none" stroke="url(#nkmark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 24 16 6 26 24" />
+        <path d="M11 24 16 15 21 24" strokeWidth="1.6" opacity="0.4" />
+      </g>
+      <g fill="url(#nkmark)">
+        <circle cx="16" cy="6" r="2.4" />
+        <circle cx="6" cy="24" r="2.1" />
+        <circle cx="26" cy="24" r="2.1" />
+      </g>
       <defs>
-        <linearGradient id="fxg" x1="4" y1="3" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+        <linearGradient id="nkmark" x1="6" y1="6" x2="26" y2="26" gradientUnits="userSpaceOnUse">
           <stop stopColor="var(--fx-blue-bright)" />
           <stop offset="1" stopColor="var(--fx-violet-bright)" />
         </linearGradient>
@@ -269,5 +270,51 @@ export const IconLease = (p: IconProps) => (
     <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
     <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
     <circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none" />
+  </Svg>
+);
+
+/* ---- inspector view icons ---- */
+export const IconLayers = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3.5 21 8l-9 4.5L3 8l9-4.5Z" />
+    <path d="M3 12.5 12 17l9-4.5" />
+    <path d="M3 16.5 12 21l9-4.5" opacity="0.55" />
+  </Svg>
+);
+export const IconActivity = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M3 12h3.5L9 6l3.5 12 2.5-6H21" />
+  </Svg>
+);
+export const IconLogs = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="4" y="4.5" width="16" height="15" rx="2" />
+    <path d="M7.5 9.5 10 12l-2.5 2.5M12.5 15h4" />
+  </Svg>
+);
+export const IconGauge = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 15a8 8 0 1 1 16 0" />
+    <path d="M12 15l3.5-3.5" />
+    <circle cx="12" cy="15" r="1.1" fill="currentColor" stroke="none" />
+  </Svg>
+);
+export const IconRoute = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="6" cy="6.5" r="2.5" />
+    <circle cx="18" cy="17.5" r="2.5" />
+    <path d="M8.5 6.5H14a3 3 0 0 1 0 6H10a3 3 0 0 0 0 6h5.5" />
+  </Svg>
+);
+export const IconInfo = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5" />
+    <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+  </Svg>
+);
+export const IconChevronLeft = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14.5 5.5 8 12l6.5 6.5" />
   </Svg>
 );

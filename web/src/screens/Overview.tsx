@@ -41,6 +41,19 @@ export function Overview() {
   const recent = useWorkflows({ limit: 8 });
   const readyz = useReadyz();
 
+  // Readiness is a first-class fact: an unreachable /readyz or a 503 must never
+  // render as healthy. Green paints only for a genuine status === "ready".
+  const readyness = (() => {
+    if (readyz.isLoading && !readyz.data) return { tone: "pending" as const, label: "Checking readiness" };
+    if (readyz.isError) return { tone: "negative" as const, label: "Control plane unreachable" };
+    if (readyz.data?.status === "ready") return { tone: "completed" as const, label: "Ready" };
+    const reason = readyz.data?.reason === "db_unavailable" ? "database unavailable"
+      : readyz.data?.reason === "relay_lag" ? "event relay lagging"
+      : undefined;
+    return { tone: "manual" as const, label: reason ? `Degraded · ${reason}` : "Not ready" };
+  })();
+  const degraded = readyness.tone === "manual" || readyness.tone === "negative";
+
   const census = metrics.data ? workflowCensus(metrics.data) : [];
   const byState = new Map<string, number>();
   for (const row of census) byState.set(row.state, (byState.get(row.state) ?? 0) + row.count);
@@ -73,12 +86,22 @@ export function Overview() {
         </div>
         <div className="fx-page-head__side">
           {metrics.dataUpdatedAt > 0 && <SnapshotAt updatedAt={metrics.dataUpdatedAt} />}
-          <span className={`fx-ready fx-ready--${readyz.data?.status ?? "unknown"}`}>
-            readyz: {readyz.data?.status ?? "…"}
-            {readyz.data?.reason ? ` (${readyz.data.reason})` : ""}
+          <span className={`fx-health fx-health--${readyness.tone}`} role="status">
+            <span className="fx-health__dot" aria-hidden="true" />
+            {readyness.label}
           </span>
         </div>
       </div>
+
+      {degraded && (
+        <div className="fx-banner fx-banner--degraded" role="alert">
+          <IconAlert size={18} aria-hidden="true" />
+          <div>
+            <strong>Control plane degraded</strong>
+            <span> {readyness.label}. Workflow state below is the last known census; new placements may not advance until readiness recovers.</span>
+          </div>
+        </div>
+      )}
 
       <div className="fx-stats">
         {metrics.isError ? (

@@ -5,7 +5,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import { FathomClient } from "../api/client";
+import { NunatakClient } from "../api/client";
 import { Endpoints } from "../api/endpoints";
 import { RateLimitError } from "../api/errors";
 import { useSettings } from "./settings";
@@ -18,7 +18,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const endpoints = useMemo(() => {
     // Rebuilt when the key changes; the getter reads the current token so a
     // long-lived query never caches a stale credential.
-    const client = new FathomClient({ getKey: () => settings.key?.token ?? null });
+    const client = new NunatakClient({ getKey: () => settings.key?.token ?? null });
     return new Endpoints(client);
   }, [settings.key?.token]);
 

@@ -1,4 +1,4 @@
-/* Fathom base — reset, typography, primitives, shared surfaces.
+/* Nunatak base — reset, typography, primitives, shared surfaces.
    Bespoke CSS only: no utility framework, no template look. */
 
 *,
@@ -65,8 +65,9 @@ a:hover {
 }
 
 h1, h2, h3, h4 {
-  font-weight: 620;
-  letter-spacing: -0.01em;
+  font-family: var(--fx-font-display);
+  font-weight: 600;
+  letter-spacing: -0.018em;
   line-height: var(--fx-lh-tight);
 }
 
@@ -110,6 +111,7 @@ input, select, textarea {
 
 .num {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv01" 1;
 }
 
 /* screen-reader-only (visually hidden, announced) */

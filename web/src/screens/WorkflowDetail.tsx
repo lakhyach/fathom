@@ -1,10 +1,12 @@
-/* Execution inspector — the signature Fathom surface. It renders the real
-   StepView chain (ordered by backend position) as an interactive graph with a
-   parallel keyboard-navigable rail, then every fact the backend exposes per
-   step: state, attempt counters, lease, deadlines, compensation and the full
-   attempt timeline (from /attempts). Operator verbs (cancel / retry-now) are the
-   only actions offered and only where the machine actually admits them, each
-   guarded by a version-checked confirmation. Nothing here is decorative. */
+/* Execution inspector — the signature Nunatak surface, laid out to the Phase 6.1
+   reference composition: a global KPI strip, an execution header, the workflow
+   graph as the centrepiece with a real progress bar, a right-hand details rail,
+   a tab strip, and lower operations panels (selected step · event log · execution
+   metrics). Every value is a real StepView/Workflow/audit fact. The graph renders
+   only the sequential chain the backend actually provides (position order +
+   compensator attributes) — no inferred branching DAG, no fabricated trends, no
+   CPU/memory telemetry the engine does not expose, no pause/cancel the machine
+   does not admit. Unsupported views say so plainly. */
 import { useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import {
@@ -15,7 +17,8 @@ import {
   type Node,
 } from "@xyflow/react";
 
-import { useAttempts, useEvents, useInbound, useWorkflow, useWorkflowAction } from "../api/hooks";
+import { useAttempts, useEvents, useInbound, useMetrics, useWorkflow, useWorkflowAction } from "../api/hooks";
+import { workflowCensus } from "../api/prom";
 import { StepNode } from "../graph/StepNode";
 import { layoutGraph, type StepNodeData } from "../graph/layout";
 import { classificationStatus, stepStatus, workflowStatus } from "../theme/status";
@@ -35,81 +38,99 @@ import {
   truncate,
   useToast,
 } from "../components/ui";
-import { IconCancel, IconExecution, IconRefresh } from "../icons";
-import type { Attempt, StepView } from "../api/types";
+import {
+  IconActivity,
+  IconAlert,
+  IconCancel,
+  IconCheck,
+  IconExecution,
+  IconInfo,
+  IconJson,
+  IconLayers,
+  IconLogs,
+  IconRefresh,
+  IconRoute,
+} from "../icons";
+import type { Attempt, StepView, Workflow } from "../api/types";
+import type { ReactNode } from "react";
 import "./screens.css";
 
 const TERMINAL = new Set(["COMPLETED", "FAILED", "ABORTED"]);
+const DONE = new Set(["SUCCEEDED", "COMPENSATED"]);
 const nodeTypes = { step: StepNode };
 
-type Tab = "graph" | "attempts" | "audit" | "inbound" | "spec";
+type Tab = "flow" | "steps" | "events" | "attempts" | "io" | "audit" | "traces";
 
 export function WorkflowDetail() {
   const { id } = useParams();
   const wf = useWorkflow(id);
-  const [tab, setTab] = useState<Tab>("graph");
+  const [tab, setTab] = useState<Tab>("flow");
   const [selected, setSelected] = useState<string | null>(null);
 
   const steps = useMemo(() => wf.data?.steps ?? [], [wf.data]);
   const base = useMemo(() => layoutGraph(steps), [steps]);
 
-  // controlled nodes derived from the latest steps + current selection; no
-  // imperative node store is needed because the graph is read-only
   const nodes = useMemo(
     () => base.nodes.map((n) => ({ ...n, data: { ...n.data, selected: n.id === selected } })),
     [base, selected],
   );
 
-  const pickStep = (stepType: string) => setSelected((cur) => (cur === stepType ? null : stepType));
-
+  const pickStep = (stepType: string) => {
+    setSelected((cur) => (cur === stepType ? null : stepType));
+    setTab("flow");
+  };
   const chosenStep = steps.find((s) => s.step_type === selected) ?? null;
 
   return (
-    <div className="fx-screen">
+    <div className="fx-screen fx-inspector">
       {wf.isLoading && <LoadingRows rows={5} />}
       {wf.isError && <ErrorState error={wf.error} onRetry={() => wf.refetch()} />}
 
       {wf.data && (
         <>
-          <div className="fx-detail-head">
-            <div className="fx-detail-title">
-              <span className="fx-crumb"><Link to="/workflows" className="fx-link">Workflows</Link> / {truncate(wf.data.id, 12)}…</span>
-              <h1>
-                {wf.data.def_name} <span className="fx-dim mono">v{wf.data.def_version}</span>
-                <StatusBadge state={wf.data.state} />
-              </h1>
-              <div className="fx-feed__meta">
-                <span className="mono">{wf.data.business_key}</span>
-                <CopyChip value={wf.data.id} label="copy id" />
-                <RelTime iso={wf.data.updated_at} />
-              </div>
-            </div>
-            <div className="fx-page-head__side">
-              {wf.dataUpdatedAt > 0 && <SnapshotAt updatedAt={wf.dataUpdatedAt} />}
-            </div>
-          </div>
+          <KpiStrip />
 
-          <div className="fx-detail-grid">
-            <div>
+          <ExecHeader wf={wf.data} updatedAt={wf.dataUpdatedAt} />
+
+          <div className="fx-insp-grid">
+            <div className="fx-insp-main">
+              <GraphPanel
+                nodes={nodes}
+                edges={base.edges}
+                steps={steps}
+                wf={wf.data}
+                updatedAt={wf.dataUpdatedAt}
+                chosen={chosenStep}
+                onPick={pickStep}
+              />
+
               <div className="fx-tabs" role="tablist" aria-label="Execution views">
-                <TabButton id="graph" tab={tab} setTab={setTab} label="Execution graph" count={steps.length} />
-                <TabButton id="attempts" tab={tab} setTab={setTab} label="Attempts" source={id} />
-                <TabButton id="audit" tab={tab} setTab={setTab} label="Audit" source={id} kind="audit" />
-                <TabButton id="inbound" tab={tab} setTab={setTab} label="Inbound" source={id} kind="inbound" />
-                <TabButton id="spec" tab={tab} setTab={setTab} label="Input &amp; definition" />
+                <TabButton id="flow" tab={tab} setTab={setTab} label="Execution Flow" Icon={IconExecution} />
+                <TabButton id="steps" tab={tab} setTab={setTab} label="Steps" Icon={IconLayers} count={steps.length} />
+                <TabButton id="events" tab={tab} setTab={setTab} label="Events" Icon={IconActivity} source={id} kind="inbound" />
+                <TabButton id="attempts" tab={tab} setTab={setTab} label="Attempts" Icon={IconRefresh} source={id} kind="attempts" />
+                <TabButton id="io" tab={tab} setTab={setTab} label="Input / Output" Icon={IconJson} />
+                <TabButton id="audit" tab={tab} setTab={setTab} label="Audit Trail" Icon={IconLogs} source={id} kind="audit" />
+                <TabButton id="traces" tab={tab} setTab={setTab} label="Traces" Icon={IconRoute} />
               </div>
 
-              {tab === "graph" && (
-                <GraphTab nodes={nodes} edges={base.edges} steps={steps} chosen={chosenStep} onPick={pickStep} />
+              {tab === "flow" && (
+                <div className="fx-lower">
+                  <StepPanel step={chosenStep} />
+                  <EventLogPanel id={id} />
+                  <ExecMetricsPanel wf={wf.data} updatedAt={wf.dataUpdatedAt} />
+                </div>
               )}
+              {tab === "steps" && <StepsTable steps={steps} onPick={pickStep} chosen={chosenStep} />}
+              {tab === "events" && <InboundTab id={id} />}
               {tab === "attempts" && <AttemptsTab id={id} />}
+              {tab === "io" && <SpecTab wf={wf.data} />}
               {tab === "audit" && <AuditTab id={id} />}
-              {tab === "inbound" && <InboundTab id={id} />}
-              {tab === "spec" && <SpecTab wf={wf.data} />}
+              {tab === "traces" && <TracesTab id={id} />}
             </div>
 
-            <aside className="fx-detail-side">
-              <MetaPanel wf={wf.data} />
+            <aside className="fx-insp-side">
+              <DetailsPanel wf={wf.data} onViewIO={() => setTab("io")} />
               <ActionPanel id={wf.data.id} state={wf.data.state} version={wf.data.version} />
             </aside>
           </div>
@@ -119,35 +140,97 @@ export function WorkflowDetail() {
   );
 }
 
-function TabButton({ id, label, tab, setTab, count, source, kind }: {
-  id: Tab; label: string; tab: Tab; setTab: (t: Tab) => void; count?: number; source?: string; kind?: "audit" | "inbound";
-}) {
+/* ------------------------------- KPI strip ------------------------------- */
+
+function KpiStrip() {
+  const metrics = useMetrics();
+  const census = metrics.data ? workflowCensus(metrics.data) : [];
+  const byState = new Map<string, number>();
+  for (const row of census) byState.set(row.state, (byState.get(row.state) ?? 0) + row.count);
+  const sum = (...keys: string[]) => keys.reduce((a, s) => a + (byState.get(s) ?? 0), 0);
+  const total = [...byState.values()].reduce((a, b) => a + b, 0);
+
+  const cards = [
+    { k: "Total", v: total, tone: "neutral" as const, icon: <IconLayers size={16} /> },
+    { k: "Completed", v: sum("COMPLETED"), tone: "completed" as const, icon: <IconCheck size={16} /> },
+    { k: "Active", v: sum("QUEUED", "RUNNING", "RETRY_WAITING", "COMPENSATING", "CANCELLING"), tone: "running" as const, icon: <IconExecution size={16} /> },
+    { k: "Failed / aborted", v: sum("FAILED", "ABORTED"), tone: "negative" as const, icon: <IconAlert size={16} /> },
+    { k: "Manual", v: sum("FAILED_MANUAL"), tone: "manual" as const, icon: <IconInfo size={16} /> },
+  ];
   return (
-    <button role="tab" aria-selected={tab === id} className={`fx-tab ${tab === id ? "fx-tab--on" : ""}`} onClick={() => setTab(id)}>
-      {label}
-      {count != null && <span className="fx-tab__count">{count}</span>}
-      {source && kind && <TabCount source={source} kind={kind} active={tab === id} />}
-    </button>
+    <div className="fx-kpi" aria-label="Fleet census">
+      {metrics.isError ? (
+        <div className="fx-kpi__err"><ErrorState error={metrics.error} onRetry={() => metrics.refetch()} /></div>
+      ) : metrics.isLoading ? (
+        <LoadingRows rows={1} />
+      ) : (
+        cards.map((c) => (
+          <div key={c.k} className={`fx-kpi__card fx-kpi__card--${c.tone}`}>
+            <span className="fx-kpi__icon" aria-hidden="true">{c.icon}</span>
+            <span className="fx-kpi__body">
+              <span className="kicker">{c.k}</span>
+              <span className="fx-kpi__v num">{c.v}</span>
+            </span>
+          </div>
+        ))
+      )}
+    </div>
   );
 }
 
-function TabCount({ source, kind, active }: { source: string; kind: "audit" | "inbound"; active: boolean }) {
-  const audit = useEvents(active ? source : undefined, { limit: 1 });
-  const inbound = useInbound(active && kind === "inbound" ? source : undefined, { limit: 1 });
-  const n = kind === "audit" ? audit.data?.items.length : inbound.data?.items.length;
-  return n ? <span className="fx-tab__count">{n}</span> : null;
+/* ------------------------------ exec header ------------------------------ */
+
+function ExecHeader({ wf, updatedAt }: { wf: Workflow; updatedAt: number }) {
+  const running = !TERMINAL.has(wf.state);
+  // Anchor "now" to the snapshot timestamp, not Date.now(): elapsed stays stable
+  // within a render and still advances one poll at a time (dataUpdatedAt).
+  const nowRef = wf.finished_at ? Date.parse(wf.finished_at) : updatedAt;
+  const elapsed = wf.started_at && nowRef ? nowRef - Date.parse(wf.started_at) : null;
+  return (
+    <div className="fx-exec-head">
+      <div className="fx-exec-head__main">
+        <span className="fx-crumb">
+          <Link to="/workflows" className="fx-link">Workflows</Link>
+          <span aria-hidden="true"> / </span>
+          <span className="mono" title={wf.id}>{truncate(wf.id, 14)}…</span>
+        </span>
+        <h1 className="fx-exec-title">
+          {wf.def_name}
+          <span className="fx-dim mono">v{wf.def_version}</span>
+          <StatusBadge state={wf.state} />
+        </h1>
+        <div className="fx-exec-meta">
+          <span><span className="fx-dim">Started</span> <TimeText iso={wf.started_at} /></span>
+          {elapsed !== null && <span><span className="fx-dim">Elapsed</span> {humanDuration(elapsed)}{running ? " · live" : ""}</span>}
+          <span><span className="fx-dim">Definition</span> {wf.def_name}</span>
+        </div>
+      </div>
+      <div className="fx-exec-head__side">
+        {updatedAt > 0 && <SnapshotAt updatedAt={updatedAt} />}
+      </div>
+    </div>
+  );
 }
 
-/* ------------------------------- graph tab ------------------------------- */
+/* ------------------------------- graph panel ----------------------------- */
 
-function GraphTab({ nodes, edges, steps, chosen, onPick }: {
+function GraphPanel({ nodes, edges, steps, wf, updatedAt, chosen, onPick }: {
   nodes: Node<StepNodeData>[];
   edges: Edge[];
   steps: StepView[];
+  wf: Workflow;
+  updatedAt: number;
   chosen: StepView | null;
   onPick: (t: string) => void;
 }) {
   const railRef = useRef<HTMLUListElement>(null);
+
+  const done = steps.filter((s) => DONE.has(s.state)).length;
+  const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
+  const current = steps.find((s) => !DONE.has(s.state)) ?? steps[steps.length - 1];
+  const nowRef = wf.finished_at ? Date.parse(wf.finished_at) : updatedAt;
+  const elapsed = wf.started_at && nowRef ? nowRef - Date.parse(wf.started_at) : null;
+
   if (steps.length === 0) {
     return (
       <Panel>
@@ -155,17 +238,15 @@ function GraphTab({ nodes, edges, steps, chosen, onPick }: {
       </Panel>
     );
   }
-  // roving focus across the step rail: arrows/Home/End move the caret between
-  // steps, Enter/Space activate (native <button> behaviour). selection itself
-  // stays with onClick so a focus move never mutates the inspected step.
+
   const onRailKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
     const btns = Array.from(railRef.current?.querySelectorAll<HTMLButtonElement>("button.fx-rail-step") ?? []);
     if (btns.length === 0) return;
     const idx = btns.indexOf(document.activeElement as HTMLButtonElement);
-    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-    if (step !== undefined) {
+    const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (dir !== undefined) {
       e.preventDefault();
-      btns[(idx < 0 ? 0 : (idx + step + btns.length) % btns.length)].focus();
+      btns[(idx < 0 ? 0 : (idx + dir + btns.length) % btns.length)].focus();
     } else if (e.key === "Home") {
       e.preventDefault();
       btns[0].focus();
@@ -174,8 +255,9 @@ function GraphTab({ nodes, edges, steps, chosen, onPick }: {
       btns[btns.length - 1].focus();
     }
   };
+
   return (
-    <div className="fx-graphwrap">
+    <section className="panel fx-graphpanel">
       <div className="fx-graph" role="group" aria-label="Workflow execution graph (visual) — use the step list for keyboard access">
         <ReactFlow
           nodes={nodes}
@@ -193,7 +275,21 @@ function GraphTab({ nodes, edges, steps, chosen, onPick }: {
         </ReactFlow>
       </div>
 
-      <div className="fx-graph-side">
+      <div className="fx-progress">
+        <div className="fx-progress__bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <span className="fx-progress__fill" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="fx-progress__row">
+          <span className="fx-progress__step">
+            Step {current ? steps.findIndex((s) => s.step_type === current.step_type) + 1 : "—"} of {steps.length}
+            {current && <span className="fx-dim"> · {current.step_type}</span>}
+          </span>
+          <span className="fx-progress__pct num">{pct}% complete</span>
+          {elapsed !== null && <span className="fx-progress__el mono">{humanDuration(elapsed)} elapsed</span>}
+        </div>
+      </div>
+
+      <div className="fx-rail-wrap">
         <p className="kicker">Steps · arrow keys to move, Enter to inspect</p>
         <ul className="fx-rail-steps" ref={railRef} onKeyDown={onRailKeyDown}>
           {steps.map((s, i) => {
@@ -215,30 +311,152 @@ function GraphTab({ nodes, edges, steps, chosen, onPick }: {
             );
           })}
         </ul>
-        {chosen ? <StepDetail step={chosen} /> : <p className="fx-hintpick">Select a step — click a node or a row above — to inspect its lease, deadlines and compensation.</p>}
       </div>
-    </div>
+    </section>
   );
 }
 
-function StepDetail({ step }: { step: StepView }) {
+/* -------------------------------- tabs ---------------------------------- */
+
+function TabButton({ id, label, tab, setTab, count, source, kind, Icon }: {
+  id: Tab; label: string; tab: Tab; setTab: (t: Tab) => void; count?: number; source?: string; kind?: "audit" | "inbound" | "attempts"; Icon: (p: { size?: number }) => ReactNode;
+}) {
   return (
-    <div className="fx-stepdetail">
-      <div className="fx-stepdetail__head">
-        <span className="mono">{step.step_type}</span>
-        <StatusBadge state={step.state} kind="step" size="sm" />
+    <button role="tab" aria-selected={tab === id} className={`fx-tab ${tab === id ? "fx-tab--on" : ""}`} onClick={() => setTab(id)}>
+      <Icon size={13} />
+      {label}
+      {count != null && <span className="fx-tab__count">{count}</span>}
+      {source && kind && <TabCount source={source} kind={kind} active={tab === id} />}
+    </button>
+  );
+}
+
+function TabCount({ source, kind, active }: { source: string; kind: "audit" | "inbound" | "attempts"; active: boolean }) {
+  const audit = useEvents(active && kind === "audit" ? source : undefined, { limit: 1 });
+  const inbound = useInbound(active && kind === "inbound" ? source : undefined, { limit: 1 });
+  const attempts = useAttempts(active && kind === "attempts" ? source : undefined);
+  const n = kind === "audit" ? audit.data?.items.length : kind === "inbound" ? inbound.data?.items.length : attempts.data?.length;
+  return n ? <span className="fx-tab__count">{n}</span> : null;
+}
+
+/* ---------------------------- lower: step panel -------------------------- */
+
+function StepPanel({ step }: { step: StepView | null }) {
+  if (!step) {
+    return (
+      <Panel title={<h2>Step details</h2>} kicker="execution flow">
+        <EmptyState icon={<IconInfo size={20} />} title="No step selected" hint="Click a node or a step row to inspect its state, attempts, lease and compensation." />
+      </Panel>
+    );
+  }
+  return (
+    <Panel title={<h2>Step · <span className="mono">{step.step_type}</span></h2>} kicker="selected" >
+      <div className="fx-stepdetail">
+        <div className="fx-stepdetail__head">
+          <StatusBadge state={step.state} kind="step" />
+          <span className="fx-dim mono">position {step.position}</span>
+        </div>
+        <dl className="fx-meta-list">
+          <div><span className="fx-meta-k">Attempts</span><span className="fx-meta-v num">{step.active_attempt} / {step.max_attempts}</span></div>
+          <div><span className="fx-meta-k">Compensable</span><span className="fx-meta-v">{step.compensable ? "yes" : "no"}</span></div>
+          {step.compensator_task && <div><span className="fx-meta-k">Compensator</span><span className="fx-meta-v mono">{step.compensator_task}</span></div>}
+          <div><span className="fx-meta-k">Lease holder</span><span className="fx-meta-v mono">{step.lease_holder ?? "—"}</span></div>
+          <div><span className="fx-meta-k">Lease expires</span><span className="fx-meta-v"><TimeText iso={step.lease_expires_at} timeOnly /></span></div>
+          <div><span className="fx-meta-k">Response by</span><span className="fx-meta-v"><TimeText iso={step.response_deadline_at} timeOnly /></span></div>
+          {step.compensation_deadline_at && <div><span className="fx-meta-k">Compensation by</span><span className="fx-meta-v"><TimeText iso={step.compensation_deadline_at} timeOnly /></span></div>}
+        </dl>
       </div>
-      <dl className="fx-meta-list">
-        <div><span className="fx-meta-k">Position</span><span className="fx-meta-v num">{step.position}</span></div>
-        <div><span className="fx-meta-k">Attempts</span><span className="fx-meta-v num">{step.active_attempt} / {step.max_attempts}</span></div>
-        <div><span className="fx-meta-k">Compensable</span><span className="fx-meta-v">{step.compensable ? "yes" : "no"}</span></div>
-        {step.compensator_task && <div><span className="fx-meta-k">Compensator</span><span className="fx-meta-v mono">{step.compensator_task}</span></div>}
-        <div><span className="fx-meta-k">Lease holder</span><span className="fx-meta-v mono">{step.lease_holder ?? "—"}</span></div>
-        <div><span className="fx-meta-k">Lease expires</span><span className="fx-meta-v"><TimeText iso={step.lease_expires_at} timeOnly /></span></div>
-        <div><span className="fx-meta-k">Response by</span><span className="fx-meta-v"><TimeText iso={step.response_deadline_at} timeOnly /></span></div>
-        {step.compensation_deadline_at && <div><span className="fx-meta-k">Compensation by</span><span className="fx-meta-v"><TimeText iso={step.compensation_deadline_at} timeOnly /></span></div>}
-      </dl>
-    </div>
+    </Panel>
+  );
+}
+
+/* ---------------------------- lower: event log --------------------------- */
+
+function EventLogPanel({ id }: { id: string | undefined }) {
+  const events = useEvents(id, { limit: 40 });
+  const rows = events.data?.items ?? [];
+  return (
+    <Panel title={<h2>Event log</h2>} kicker="audit transitions · newest first" bodyClass="fx-panel__body--flush">
+      {events.isLoading && <div style={{ padding: 16 }}><LoadingRows rows={4} /></div>}
+      {events.isError && <div style={{ padding: 16 }}><ErrorState error={events.error} /></div>}
+      {!events.isLoading && rows.length === 0 && <EmptyState title="No transitions recorded" />}
+      {rows.length > 0 && (
+        <ul className="fx-log">
+          {rows.map((a) => {
+            const tone = workflowStatus(a.to_state).tone;
+            return (
+              <li key={a.seq} className="fx-log__row">
+                <span className="fx-log__time mono"><TimeText iso={a.created_at} timeOnly /></span>
+                <span className={`fx-log__lvl fx-log__lvl--${tone}`}>{a.kind}</span>
+                <span className="fx-log__msg">
+                  {a.from_state ? `${workflowStatus(a.from_state).label} → ${workflowStatus(a.to_state).label}` : workflowStatus(a.to_state).label}
+                  <span className="fx-log__code mono">{a.reason_code}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+/* ------------------------- lower: execution metrics ---------------------- */
+
+function ExecMetricsPanel({ wf, updatedAt }: { wf: Workflow; updatedAt: number }) {
+  const steps = wf.steps;
+  const totalAttempts = steps.reduce((a, s) => a + s.active_attempt, 0);
+  const compensable = steps.filter((s) => s.compensable).length;
+  const wall = wf.started_at && wf.finished_at ? Date.parse(wf.finished_at) - Date.parse(wf.started_at) : null;
+  const deadlineLeft = wf.deadline_at ? Date.parse(wf.deadline_at) - updatedAt : null;
+  const metrics = [
+    { k: "Steps", v: String(steps.length) },
+    { k: "Attempts issued", v: String(totalAttempts) },
+    { k: "Compensable", v: String(compensable) },
+    { k: "Wall time", v: wall !== null ? humanDuration(wall) : "—" },
+    { k: "Deadline", v: deadlineLeft !== null && !TERMINAL.has(wf.state) ? (deadlineLeft > 0 ? `${humanDuration(deadlineLeft)} left` : "breached") : "—" },
+  ];
+  return (
+    <Panel title={<h2>Execution metrics</h2>} kicker="derived from real step data">
+      <ul className="fx-exec-metrics">
+        {metrics.map((m) => (
+          <li key={m.k} className="fx-exec-metrics__row">
+            <span className="fx-exec-metrics__k">{m.k}</span>
+            <span className="fx-exec-metrics__v num">{m.v}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="fx-note">
+        Host CPU, memory and connection telemetry are <strong>not exposed</strong> by the engine, so they are
+        intentionally absent here rather than simulated.
+      </p>
+    </Panel>
+  );
+}
+
+/* ------------------------------- steps table ----------------------------- */
+
+function StepsTable({ steps, onPick, chosen }: { steps: StepView[]; onPick: (t: string) => void; chosen: StepView | null }) {
+  return (
+    <Panel bodyClass="fx-panel__body--flush">
+      <table className="tbl">
+        <thead>
+          <tr><th>#</th><th>Step</th><th>State</th><th>Attempts</th><th>Lease</th><th>Compensator</th></tr>
+        </thead>
+        <tbody>
+          {steps.map((s) => (
+            <tr key={s.step_type} className={`fx-link-row ${chosen?.step_type === s.step_type ? "fx-row--on" : ""}`} onClick={() => onPick(s.step_type)}>
+              <td className="num">{s.position}</td>
+              <td className="mono">{s.step_type}</td>
+              <td><StatusBadge state={s.state} kind="step" size="sm" /></td>
+              <td className="num">{s.active_attempt}/{s.max_attempts}</td>
+              <td className="mono fx-dim">{s.lease_holder ?? "—"}</td>
+              <td className="mono fx-dim">{s.compensator_task ?? "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Panel>
   );
 }
 
@@ -297,17 +515,12 @@ function buildGantt(items: Attempt[]): { rows: GanttRow[]; spanMs: number } | nu
   const rows = items.map((a) => {
     const s = Date.parse(a.started_at);
     const e = a.finished_at ? Date.parse(a.finished_at) : now;
-    return {
-      a,
-      leftPct: ((s - origin) / span) * 100,
-      widthPct: Math.max(((e - s) / span) * 100, 0.6),
-      durationMs: e - s,
-    };
+    return { a, leftPct: ((s - origin) / span) * 100, widthPct: Math.max(((e - s) / span) * 100, 0.6), durationMs: e - s };
   });
   return { rows, spanMs: span };
 }
 
-/* -------------------------------- audit tab ------------------------------- */
+/* -------------------------------- audit tab ------------------------------ */
 
 function AuditTab({ id }: { id: string | undefined }) {
   const events = useEvents(id, { limit: 50 });
@@ -339,7 +552,7 @@ function AuditTab({ id }: { id: string | undefined }) {
   );
 }
 
-/* ------------------------------- inbound tab ------------------------------ */
+/* ------------------------------- inbound tab ----------------------------- */
 
 function InboundTab({ id }: { id: string | undefined }) {
   const inbound = useInbound(id, { limit: 50 });
@@ -348,7 +561,7 @@ function InboundTab({ id }: { id: string | undefined }) {
     <Panel bodyClass="fx-panel__body--flush">
       {inbound.isLoading && <LoadingRows rows={4} />}
       {inbound.isError && <div style={{ padding: 16 }}><ErrorState error={inbound.error} /></div>}
-      {!inbound.isLoading && rows.length === 0 && <EmptyState title="No inbound events correlated" />}
+      {!inbound.isLoading && rows.length === 0 && <EmptyState title="No inbound events correlated" hint="Correlated Kafka/outbox events for this workflow will appear here." />}
       {rows.length > 0 && (
         <ul className="fx-feed">
           {rows.map((e) => (
@@ -371,13 +584,17 @@ function InboundTab({ id }: { id: string | undefined }) {
   );
 }
 
-/* --------------------------------- spec tab ------------------------------- */
+/* --------------------------------- io tab -------------------------------- */
 
-function SpecTab({ wf }: { wf: import("../api/types").Workflow }) {
+function SpecTab({ wf }: { wf: Workflow }) {
   return (
     <div className="fx-grid-2">
       <Panel title={<h2>Instance input</h2>} kicker="workflow.input">
         <JsonView value={wf.input} collapsed={false} />
+        <p className="fx-note fx-note--warn">
+          Step <em>outputs</em> are not persisted or exposed by the engine, so only the instance input and the
+          frozen definition snapshot are shown. Recording per-step output is a documented backend follow-up.
+        </p>
       </Panel>
       <Panel title={<h2>Definition snapshot</h2>} kicker="frozen at creation">
         <JsonView value={wf.def_snapshot} collapsed={false} />
@@ -387,28 +604,78 @@ function SpecTab({ wf }: { wf: import("../api/types").Workflow }) {
   );
 }
 
-/* -------------------------------- meta rail ------------------------------- */
+/* ------------------------------- traces tab ------------------------------ */
 
-function MetaPanel({ wf }: { wf: import("../api/types").Workflow }) {
-  const span = wf.started_at && wf.finished_at ? Date.parse(wf.finished_at) - Date.parse(wf.started_at) : null;
+function TracesTab({ id }: { id: string | undefined }) {
+  const events = useEvents(id, { limit: 100 });
+  const traces = useMemo(() => {
+    const rows = events.data?.items ?? [];
+    const seen = new Map<string, { count: number; last: string }>();
+    for (const e of rows) {
+      if (!e.trace_id) continue;
+      const cur = seen.get(e.trace_id);
+      if (cur) { cur.count += 1; if (e.created_at > cur.last) cur.last = e.created_at; }
+      else seen.set(e.trace_id, { count: 1, last: e.created_at });
+    }
+    return [...seen.entries()];
+  }, [events.data]);
+
   return (
-    <Panel title={<h2>Instance</h2>} kicker="live detail">
-      <dl className="fx-meta-list">
-        <div><span className="fx-meta-k">State</span><span className="fx-meta-v"><StatusBadge state={wf.state} /></span></div>
-        <div><span className="fx-meta-k">Version</span><span className="fx-meta-v num">{wf.version}</span></div>
-        <div><span className="fx-meta-k">Definition</span><span className="fx-meta-v">{wf.def_name} · v{wf.def_version}</span></div>
-        <div><span className="fx-meta-k">Business key</span><span className="fx-meta-v mono">{wf.business_key}</span></div>
-        <div><span className="fx-meta-k">Created</span><span className="fx-meta-v"><TimeText iso={wf.created_at} /></span></div>
-        <div><span className="fx-meta-k">Started</span><span className="fx-meta-v"><TimeText iso={wf.started_at} /></span></div>
-        <div><span className="fx-meta-k">Finished</span><span className="fx-meta-v"><TimeText iso={wf.finished_at} /></span></div>
-        {wf.started_at && wf.finished_at && <div><span className="fx-meta-k">Wall time</span><span className="fx-meta-v">{humanDuration(span)}</span></div>}
-        <div><span className="fx-meta-k">Deadline</span><span className="fx-meta-v"><TimeText iso={wf.deadline_at} /></span></div>
-        {wf.next_attempt_at && <div><span className="fx-meta-k">Next attempt</span><span className="fx-meta-v"><TimeText iso={wf.next_attempt_at} timeOnly /></span></div>}
-        <div><span className="fx-meta-k">Steps</span><span className="fx-meta-v num">{wf.steps.length}</span></div>
-      </dl>
+    <Panel bodyClass="fx-panel__body--flush">
+      {events.isLoading && <LoadingRows rows={3} />}
+      {events.isError && <div style={{ padding: 16 }}><ErrorState error={events.error} /></div>}
+      {!events.isLoading && (
+        <div className="fx-traces">
+          <p className="fx-note">
+            There is no distributed-trace backend (gap G7). The identifiers below are the real <code className="mono">trace_id</code> values
+            the engine already stamped on this workflow’s audit rows — shown for correlation, not as a full trace tree.
+          </p>
+          {traces.length === 0 ? (
+            <EmptyState title="No trace identifiers stamped" hint="Audit rows for this workflow carry no trace_id." />
+          ) : (
+            <ul className="fx-traces__list">
+              {traces.map(([tid, m]) => (
+                <li key={tid} className="fx-traces__row">
+                  <CopyChip value={tid} label={truncate(tid, 28)} />
+                  <span className="fx-dim">{m.count} event{m.count === 1 ? "" : "s"}</span>
+                  <span className="fx-dim mono">last <TimeText iso={m.last} timeOnly /></span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </Panel>
   );
 }
+
+/* ------------------------------ details rail ----------------------------- */
+
+function DetailsPanel({ wf, onViewIO }: { wf: Workflow; onViewIO: () => void }) {
+  const span = wf.started_at && wf.finished_at ? Date.parse(wf.finished_at) - Date.parse(wf.started_at) : null;
+  const current = wf.steps.find((s) => !DONE.has(s.state)) ?? wf.steps[wf.steps.length - 1];
+  return (
+    <Panel title={<h2>Workflow details</h2>} kicker="live detail">
+      <dl className="fx-meta-list">
+        <div><span className="fx-meta-k">ID</span><span className="fx-meta-v"><CopyChip value={wf.id} label={`${truncate(wf.id, 18)}…`} /></span></div>
+        <div><span className="fx-meta-k">Status</span><span className="fx-meta-v"><StatusBadge state={wf.state} /></span></div>
+        <div><span className="fx-meta-k">Definition</span><span className="fx-meta-v">{wf.def_name} · v{wf.def_version}</span></div>
+        <div><span className="fx-meta-k">Business key</span><span className="fx-meta-v mono">{wf.business_key}</span></div>
+        <div><span className="fx-meta-k">Current step</span><span className="fx-meta-v mono">{current ? current.step_type : "—"}</span></div>
+        <div><span className="fx-meta-k">Version</span><span className="fx-meta-v num">{wf.version}</span></div>
+        <div><span className="fx-meta-k">Started</span><span className="fx-meta-v"><TimeText iso={wf.started_at} /></span></div>
+        <div><span className="fx-meta-k">Duration</span><span className="fx-meta-v">{span !== null ? humanDuration(span) : "—"}</span></div>
+        <div><span className="fx-meta-k">Deadline</span><span className="fx-meta-v"><TimeText iso={wf.deadline_at} /></span></div>
+        <div><span className="fx-meta-k">Updated</span><span className="fx-meta-v"><RelTime iso={wf.updated_at} /></span></div>
+      </dl>
+      <button type="button" className="btn btn-sm fx-details__json" onClick={onViewIO}>
+        <IconJson size={13} /> View input &amp; definition
+      </button>
+    </Panel>
+  );
+}
+
+/* ------------------------------ action panel ----------------------------- */
 
 function ActionPanel({ id, state, version }: { id: string; state: string; version: number }) {
   const toast = useToast();
@@ -443,8 +710,8 @@ function ActionPanel({ id, state, version }: { id: string; state: string; versio
       </div>
       <p className="fx-hintpick">{confirm === "retry-now" ? retryHint : cancelHint}</p>
       <p className="fx-note">
-        Both verbs send <code className="mono">version: {version}</code> — the value currently read. If the engine
-        advanced first, the write answers 409 and re-reads before you retry.
+        The engine exposes no pause or priority control, so neither is offered. Both verbs send <code className="mono">version: {version}</code>;
+        if the engine advanced first, the write answers 409 and re-reads before you retry.
       </p>
 
       {confirm && (
@@ -473,7 +740,7 @@ function ActionPanel({ id, state, version }: { id: string; state: string; versio
           }
         />
       )}
-      <Link to={`/events?workflow=${id}`} className="btn btn-ghost btn-sm fx-actionlink"><IconExecution size={13} /> Open full event ledger</Link>
+      <Link to={`/events?workflow=${id}`} className="btn btn-ghost btn-sm fx-actionlink"><IconLogs size={13} /> Open full event ledger</Link>
     </Panel>
   );
 }

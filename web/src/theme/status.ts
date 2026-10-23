@@ -2,7 +2,7 @@
    (UI spec §4). Colour never travels alone: every usage co-renders the
    label text, keeping the system colour-blind-safe.
    Deviation recorded in PHASE_6_VALIDATION_REPORT: spec §4 pairs
-   COMPENSATING with amber; Fathom renders rollback as violet so the
+   COMPENSATING with amber; Nunatak renders rollback as violet so the
    reverse lane reads as its own story in the graph — text badges stay
    identical either way. */
 

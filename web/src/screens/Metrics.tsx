@@ -140,7 +140,7 @@ export function Metrics() {
 
           <Panel title={<h2>Raw series</h2>} kicker="every fathom_* sample served" bodyClass="fx-panel__body--flush">
             <table className="fx-series-table">
-              <caption className="sr-only">All fathom Prometheus series in this scrape</caption>
+              <caption className="sr-only">All <code>fathom_</code>-prefixed metric series in this scrape</caption>
               <tbody>
                 {Object.values(map)
                   .filter((fam) => fam.name.startsWith("fathom_"))
@@ -155,7 +155,7 @@ export function Metrics() {
                 {Object.values(map).filter((f) => f.name.startsWith("fathom_") && f.samples.length > 0).length === 0 && (
                   <tr>
                     <td colSpan={3}>
-                      <EmptyState title="No fathom series yet" hint="The process registers its series once the engine has state to report." />
+                      <EmptyState title="No fathom_-prefixed series yet" hint="The process registers its metric series once the engine has state to report." />
                     </td>
                   </tr>
                 )}
