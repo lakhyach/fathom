@@ -1,0 +1,52 @@
+# Local env & secrets — never tracked
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*_local.yaml
+config_local.yaml
+
+# Build outputs
+bin/
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.test
+# tools/depprobe compiled probe (Windows binary name)
+tools/depprobe/depprobe
+
+# Go
+vendor/
+coverage.out
+coverage.html
+.nprof/
+
+# Node / frontend
+node_modules/
+web/dist/
+*.tsbuildinfo
+.vite/
+
+# Databases, dumps, generated data — never tracked
+*.sql.dmp
+*.dump
+*.pgdump
+data/
+local/
+/var/
+postgres-data/
+kafka-data/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local scratch & recordings
+*.log
+tmp/
+.e2e-artifacts/

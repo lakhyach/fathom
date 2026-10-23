@@ -1,0 +1,88 @@
+# Architecture Decisions — locked at Phase 2
+
+Date: 2026-10-23. Host: Windows 25H2, go1.26.5, Node v24.16.0, Docker 29.7.2 / Compose v5.5.0.
+Each ADR records the decision, the **evidence actually measured** (marked 🔬), the rationale, and the rejected alternatives. Version-sensitive links were retrieved 2026-10-23 and must be re-verified at upgrade time.
+
+---
+
+## ADR-001 — Repository boundary and git discipline
+**Decided:** new directory `E:\Projects\fathom-workflow`, fresh `git init` (branch `main`), **no remote configured, ever pointing at upstream**. The clone at `E:\Projects\saga-orchestration-go` remains untouched (verified: `git status` there shows only its own `docs/`).
+**Why:** upstream `origin` has *push* access to the author's repository (Phase 1 audit §1); a stray push would be an act of vandalism on someone else's project. A history-less repo also makes the "original implementation" claim structurally true, not just rhetorically.
+**Rejected:** fork (keeps upstream history and invites comparison-clone perception); working inside the clone (blurs provenance).
+
+## ADR-002 — Codename "Fathom"; no public brand yet
+**Decided:** internal codename **Fathom** (a unit of depth — fitting for depth-inspectable workflows). Directory/module naming uses `fathom`. Final branding is deferred to Phase 7 and requires a fresh conflict check.
+**Evidence 🔬:** collision search 2026-10-23: "Cadence" collides twice (Uber's workflow engine; the user's own `E:\Projects\Cadence` health project) → the Phase 1 proposal name is **retired**. "Fathom" collides only with unrelated categories (AI notetaker fathom.ai, accounting BI fathomhq, fisheries software) — acceptable for an internal codename, risky for a public dev-tool name; hence the rebrand gate.
+**Rejected:** Cadence (direct collision with a workflow engine — fatal for a portfolio piece in the same category).
+
+## ADR-003 — Build the engine; do not adopt Temporal/Cadence
+**Decided:** implement a focused workflow engine (state machine, leases, timers, retries, compensation, DLQ) as the core deliverable.
+**Why:** the engine *is* the portfolio artefact; Phase 1 produced a concrete, reproduced defect list the engine must solve, which converts into named regression tests (`AT-01…AT-10`). Adopting a complete engine would reduce the project to integration and remove the ability to demonstrate internal guarantees.
+**Rejected:** Temporal/Cadence/Camunda — mature and correct, but they'd re-create solved problems *outside* the demonstrable scope; revisit only if the goal shifts from engineering proof to productising fast.
+**Risk accepted:** we re-discover engine bugs. Mitigation: the state machine is a pure function over one row + version, property-tested (`TP-` tests) before any transport exists.
+
+## ADR-004 — Go backend, single module, `CGO_ENABLED=0` for ordinary development
+**Decided:** Go 1.26.5 host toolchain; one module `github.com/Lakhyajit-96/fathom` (root `go.mod`, binaries under `cmd/`, engine under `internal/`); every ordinary build/test path works with CGO disabled on Windows and cross-compiles for Linux.
+**Evidence 🔬:** Phase 1 baseline §2 — the audited repo's `go build ./...` **fails on this host** because `confluent-kafka-go` needs CGO/librdkafka (DS-12 class). The chosen stack (ADR-005 probe) built with exit 0 under `CGO_ENABLED=0` on windows/amd64 and under `GOOS=linux` for amd64 and arm64.
+**Rejected:** multiple modules per service (version-lock friction with no deployment benefit at this size); microservice-per-domain split of the control plane (the control plane is one deployable; participants are separate *processes*, same module).
+
+## ADR-005 — Kafka client: **franz-go** (measured decision, not taste)
+**Decided:** `github.com/twmb/franz-go` v1.22.2 (kgo) + `pkg/kadm` v1.19.0 for admin ops, for the CDC-mode producer/consumer.
+**Evidence 🔬 (2026-10-23, same host, `go build` exit codes):**
+| Probe | Result |
+| --- | --- |
+| franz-go + pgx + otel + prometheus + chi + testcontainers, `CGO_ENABLED=0`, windows/amd64 | **exit 0** |
+| same, `GOOS=linux/amd64` and `GOOS=linux/arm64` | **exit 0** |
+| `confluent-kafka-go/v2` v2.16.0, `CGO_ENABLED=0`, windows | **fail** — package API compiled out (`undefined: kafka.Consumer` class) |
+| same, `CGO_ENABLED=1` (no gcc on host) | **fail** — `cgo: C compiler "gcc" not found` |
+**Rationale:** the v2 line is current and high-fidelity (based on librdkafka ≥ 2.13/2.16 — [confluent changelog](https://docs.confluent.io/kafka-clients/go/current/changelog.html), 2026-10-23), but it permanently reintroduces a native toolchain + librdkafka lifecycle — exactly the failure mode that made the audited repo unbuildable and un-reproducible. franz-go is pure Go, BSD-3, feature-complete through Kafka 4.x incl. idempotent/transactional producing and SCRAM ([repo](https://github.com/twmb/franz-go), 2026-10-23). Testability wins: unit tests can fake a broker-less producer without a C dependency.
+**Rejected:** `confluent-kafka-go/v2` (CGO; proven above); `Segmenta kafka-go` (less active; no advantage over franz-go here). Decision is *reversible* — the `Relay` interface (ADR-006) isolates the client.
+
+## ADR-006 — Two relays, one interface
+**Decided:** `Relay` interface with (a) **pgoutbox** — pure-Go poller (`SELECT … FOR UPDATE SKIP LOCKED` → produce → mark `published_at`), the default for dev/CI; (b) **cdc-debezium** — outbox table → Debezium connector → Kafka, the production-shaped demo mode. Shared conformance suite (§test plan T-RELAY) both must pass.
+**Why:** Phase 1 verified the Debezium + Outbox EventRouter topology genuinely works (audit capability rows 1–2) — that strength is kept, not copied blindly; but forcing a 3 GB Kafka+Connect stack into every CI test is operational theatre. `published_at` + sequence cursor also fixes DS-9 (outbox never marked/pruned, replay accidental instead of intentional).
+**Rejected:** Kafka-only (slow, flaky CI); pure-Go-only (throws away the audited CDC differentiator); NATS/NSQ (would be a new lesson, not a workflow lesson).
+
+## ADR-007 — CDC mode infrastructure versions (pinned)
+**Decided for `deploy/compose-cdc.yaml`:** Kafka via official `apache/kafka` KRaft image (available since 3.7; [official docs](https://kafka.apache.org/41/getting-started/docker/), 2026-10-23), Debezium platform image `quay.io/debezium/connect:3.7.0.Final` (Debezium 3.7 = latest stable, 2026-09-29, [releases](https://debezium.io/releases/); images moved to quay.io exclusively since 3.0, [notice](https://debezium.io/blog/2024-09-18/quay-io-reminder/)), connector = built-in `PostgresConnector` with `OutboxEventRouter` SMT (still the documented mechanism, [Debezium outbox doc](https://debezium.io/documentation/reference/stable/transformations/outbox-event-router.html)). All images pinned by tag **and digest**; no `latest-*` (fixes DS-12's mutable-base lesson).
+**Rejected:** the audited repo's `confluentinc/cp-*:7.4.1` + `strimzi:latest-kafka-3.4.0` + connector 2.4.1 tarball from a mutable URL (Zookeeper-era, EOL series, non-reproducible).
+**Open item (flagged, not blocking):** exact `apache/kafka` ↔ Connect-runtime compatibility matrix is verified in Phase 3 P1 by running the conformance suite; if the platform image forces a specific Kafka build, that pinned pair becomes the recorded decision.
+
+## ADR-008 — Durable state: PostgreSQL 17, pgx/v5, golang-migrate
+**Decided:** Postgres as the only consensus layer: workflow/step/attempt rows, leases, timers, idempotency, outbox, DLQ, audit — one transactional domain. Client `pgx v5.11.0` (+ `pgxpool`); schema via `golang-migrate` versioned SQL migrations (no init-only bind mounts — Phase 1 had no migration story). `btree_gist` + `daterange` EXCLUDE constraint for the inventory showcase.
+**Evidence 🔬:** pgx resolves and builds in the probe (ADR-005 table); Phase 1 proved Postgres transaction semantics carry the outbox and dedup patterns correctly.
+**Rejected:** Redis/ZK for locks (extra failure domain, no gain); Durable Objects (platform lock-in breaks portability of the engine claim); SQLite (no row-level locks/`SKIP LOCKED`, weak demo of concurrent-worker semantics).
+
+## ADR-009 — Concurrency model: optimistic core + lease-based claiming
+**Decided:** workflow rows carry `version`; **every** transition is `UPDATE … WHERE id=$1 AND version=$2` with `RowsAffected==1` required (fixes DS-4 — the audited repo incremented version but never used it). Workers claim steps with `SELECT … FOR UPDATE SKIP LOCKED` + `lease_expires_at` + monotonically increasing per-step `attempt` whose value **is** the fencing token participants must check. Multi-replica control plane and workers are safe by construction.
+**Rejected:** Kafka consumer-group partitioning as the lock (couples workflow identity to topic topology; awkward replay — Phase 1 target-architecture §3 rationale stands); advisory locks without durable records.
+
+## ADR-010 — Event contract & topic strategy
+**Decided:** versioned JSON envelope (CloudEvents-inspired; exact fields in DATA doc §C) with mandatory identity block `event_id, workflow_id, step_type, attempt, causation_id, traceparent, specversion`. Topics: `fathom.commands.v1`, `fathom.results.v1`, `fathom.dlq.v1` — partition key = `workflow_id` (per-workflow ordering at any partition count; removes the audited 1-partition crutch, DS-11). Envelope validated at ingest; **reject-with-classification**, never reject-by-drop. Golden-file contract tests in CI. No schema registry (rejected: enforcement worth a whole extra service at this scale — Phase 1 target-arch trade-off 4 stands).
+
+## ADR-011 — Idempotency layering
+**Decided:** four explicit keys, four explicit stores (full table in DATA doc §D): client `Idempotency-Key` (API), `business_key` partial-unique (one active workflow per target), `(workflow_id, step_type, attempt)` (participant inbox, same tx as side effect), `event_id` (engine `processed_events`). Each layer names its on-duplicate behaviour. The audited repo proved layer 4 alone is not enough (DS-1: a re-authored event has a fresh id).
+
+## ADR-012 — Guaranteed progress subsystem
+**Decided:** deadlines are data (`deadline_at` on workflow, `response_timeout` per step), enforced by a **reaper** (multi-replica-safe via `SKIP LOCKED`), retry schedules are durable rows/columns (`next_attempt_at`), retry budgets are per-step-with-jitter, compensation failure escalates to `FAILED_MANUAL` + DLQ. `oldest_open_workflow_age_seconds` is a first-class metric and a CI gate input (closes DS-2, DS-6, scenario 10).
+**Rejected:** relying on transport redelivery for progress (the audited system's only "timer" was human patience).
+
+## ADR-013 — AuthN/AuthZ model (demo-honest, not theatrical)
+**Decided:** local-first single tenant; cockpit auth via session cookie + CSRF; API via bearer key; roles `reader` / `operator` / `admin`; operator actions require role + reason string + audit write incl. state snapshot. Passwords/keys from env only; demo credentials live in `.env.example` as obviously-fake values and are **never** read by code paths that could ship them (fixes the Phase 1 hard-coded-credential pattern). Full mapping in THREAT_MODEL.md.
+**Rejected:** "no auth because demo" (kills the safe-operator product story); OIDC provider dependency (external service, billable or fiddly, adds no demonstrable boundary).
+
+## ADR-014 — Frontend stack
+**Decided:** React **19.3.1** + Vite **8.3.5** + TypeScript (pinned at scaffold; TS 7.0.2 is newly released — pin the version Vite's template ships and verify before adopting 7.x), `@xyflow/react` **12.12.0** (MIT, actively published — npm registry 2026-10-23) for the execution graph, `@tanstack/react-query` **5.104.5** for server state, **SSE** (not WebSocket) for live updates.
+**Why SSE:** the stream is one-way (mutations are REST + idempotency keys); `Last-Event-ID` reconnect maps directly onto our monotonic `audit_event.seq` — reconnection becomes a *demonstrable* property rather than a claim.
+**Rejected:** Next.js (no SEO need; second runtime to operate); Redux (query-cache-shaped state); hand-rolled SVG graph; WebSocket (no client→server channel needed; harder reconnect semantics).
+
+## ADR-015 — Observability
+**Decided:** `log/slog` structured JSON (mandatory `workflow_id/step_type/attempt/trace_id` fields), OpenTelemetry v1.47.0 (OTLP/HTTP → local Jaeger), Prometheus `client_golang` v1.25.0. Metric set and SLIs are normed in OBSERVABILITY doc §2 — several are *exit-gate inputs*, not decoration. `/healthz`, `/readyz` (DB + relay lag), `/metrics`.
+**Rejected:** logs-as-metrics (the audited default); third-party APM (external account, unmeasurable in CI).
+
+## ADR-016 — Upstream reuse policy
+**Decided:** **concepts only, re-implemented from scratch; zero copied lines.** Three mechanisms from the audited repo are deliberately re-implemented (in-transaction outbox; dedup-record-inside-consumer-transaction; Debezium EventRouter CDC topology) and recorded in `ATTRIBUTION_AND_LICENSES.md` with the MIT notice of `semotpan/saga-orchestration-go` retained as license obligation + courtesy.
+**Rejected:** verbatim reuse (legal under MIT, but muddies the originality claim for no engineering gain); clean-room-with-no-attribution (paying a self-inflicted cost — the mechanisms were empirically validated).
+
+## ADR-017 — No remote, no deploy, no billable resources in Phase 2/3
+**Decided:** local git only. GitHub publication and any hosting require explicit user authorization at the end of Phase 6/7 respectively. Nothing here purchases or deploys anything.
