@@ -57,6 +57,82 @@ export function StateStack({ slices, total }: { slices: CensusSlice[]; total: nu
   );
 }
 
+/* ---- census donut: same real data as StateStack, but a ring + a detailed
+   legend that fills a tall panel honestly (no invented series). Centre shows
+   the durable total; each legend row carries count and share of total. ---- */
+
+export function Donut({ slices, total, size = 176, thickness = 24 }: {
+  slices: CensusSlice[];
+  total: number;
+  size?: number;
+  thickness?: number;
+}) {
+  const segs = useMemo(() => {
+    if (total <= 0) return [];
+    let acc = 0;
+    return slices
+      .filter((s) => s.count > 0)
+      .map((s) => {
+        const from = acc / total;
+        acc += s.count;
+        return { ...s, from, frac: s.count / total };
+      });
+  }, [slices, total]);
+
+  if (total <= 0) {
+    return <p className="fx-chart-empty">No workflows recorded yet — the census is empty, not zero-traffic.</p>;
+  }
+
+  const cx = size / 2;
+  const R = (size - thickness) / 2;
+  const C = 2 * Math.PI * R;
+
+  return (
+    <div className="fx-donut">
+      <svg
+        className="fx-donut__chart"
+        viewBox={`0 0 ${size} ${size}`}
+        width={size}
+        height={size}
+        role="img"
+        aria-label={`Workflow state census, ${total} total: ${segs.map((s) => `${s.count} ${workflowStatus(s.state).label}`).join(", ")}`}
+      >
+        <circle cx={cx} cy={cx} r={R} fill="none" stroke="var(--fx-inset)" strokeWidth={thickness} />
+        <g transform={`rotate(-90 ${cx} ${cx})`}>
+          {segs.map((s) => (
+            <circle
+              key={s.state}
+              cx={cx}
+              cy={cx}
+              r={R}
+              fill="none"
+              stroke={`var(--fx-st-${workflowStatus(s.state).tone})`}
+              strokeWidth={thickness}
+              strokeDasharray={`${s.frac * C} ${C - s.frac * C}`}
+              strokeDashoffset={-s.from * C}
+              className={`fx-donut__seg fx-donut__seg--${workflowStatus(s.state).tone}`}
+            >
+              <title>{`${s.count} ${workflowStatus(s.state).label}`}</title>
+            </circle>
+          ))}
+        </g>
+        <text x={cx} y={cx - 3} textAnchor="middle" className="fx-donut__total num">{total}</text>
+        <text x={cx} y={cx + 16} textAnchor="middle" className="fx-donut__cap">workflows</text>
+      </svg>
+      <ul className="fx-donut__legend">
+        {segs.map((s) => (
+          <li key={s.state}>
+            <span className={`fx-dot fx-dot--${workflowStatus(s.state).tone}`} aria-hidden="true" />
+            <span className="fx-donut__label">{workflowStatus(s.state).label}</span>
+            <span className="fx-donut__pct num">{Math.round(s.frac * 100)}%</span>
+            <span className="fx-donut__count num">{s.count}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /* ---- horizontal bars (classification totals, DLQ by class) ---- */
 
 export function BarList({ rows, tone = "blue", emptyText = "No samples in this series yet." }: {

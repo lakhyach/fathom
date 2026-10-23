@@ -8,7 +8,7 @@ import { useMetrics, useReadyz, useWorkflows } from "../api/hooks";
 import { byLabel, gaugeValue, workflowCensus } from "../api/prom";
 import { workflowStatus } from "../theme/status";
 import { Panel, SnapshotAt, EmptyState, ErrorState, LoadingRows, StatusBadge, TimeText, RelTime, KpiCard } from "../components/ui";
-import { BarList, GaugeRing, StateStack } from "../components/charts";
+import { BarList, Donut, GaugeRing } from "../components/charts";
 import {
   IconCheck,
   IconClock,
@@ -119,7 +119,7 @@ export function Overview() {
 
       <div className="fx-grid-2">
         <Panel {...rise(0)} title={<h2>State census</h2>} kicker="fathom_workflows_total">
-          <StateStack slices={slices} total={total} />
+          <Donut slices={slices} total={total} />
         </Panel>
 
         <Panel

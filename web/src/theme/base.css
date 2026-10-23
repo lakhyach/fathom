@@ -21,10 +21,13 @@ body {
   line-height: var(--fx-lh-normal);
   color: var(--fx-ink);
   background: var(--fx-void);
-  /* restrained depth: one radial wash of navy, no decorative clutter */
+  /* restrained depth: layered navy washes + a faint centre haze so the app
+     reads as an atmospheric cockpit, not a flat dark page. Still subtle —
+     no decorative clutter, content contrast is untouched. */
   background-image:
-    radial-gradient(1200px 600px at 85% -10%, oklch(0.32 0.06 275 / 0.22), transparent 60%),
-    radial-gradient(900px 500px at -5% 110%, oklch(0.28 0.05 290 / 0.14), transparent 55%);
+    radial-gradient(1200px 620px at 85% -12%, oklch(0.34 0.07 275 / 0.26), transparent 60%),
+    radial-gradient(1000px 560px at -8% 112%, oklch(0.3 0.06 292 / 0.18), transparent 55%),
+    radial-gradient(820px 820px at 50% 34%, oklch(0.24 0.05 262 / 0.12), transparent 70%);
   background-attachment: fixed;
   min-height: 100vh;
 }
@@ -146,10 +149,12 @@ input, select, textarea {
 
 /* ---- shared panel: the one card recipe ---- */
 .panel {
-  background: var(--fx-panel);
+  background:
+    linear-gradient(180deg, oklch(1 0 0 / 0.015), transparent 42%),
+    var(--fx-panel);
   border: var(--fx-hair) solid var(--fx-line);
   border-radius: var(--fx-r-lg);
-  box-shadow: var(--fx-shadow-panel), inset 0 1px 0 oklch(1 0 0 / 0.03);
+  box-shadow: var(--fx-shadow-panel), inset 0 1px 0 oklch(1 0 0 / 0.04);
 }
 
 .panel-head {
