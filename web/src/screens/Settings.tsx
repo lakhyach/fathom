@@ -4,7 +4,7 @@
    diagnostics run the three real unauthenticated probes. The definitions panel
    lists the live registry and — for admin keys only — registers a new version,
    mirroring POST /v1/definitions exactly (name, version>=1, steps document). */
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import { useDefinitions, useHealthz, useMetrics, useReadyz, useRegisterDefinition } from "../api/hooks";
 import type { Readyz } from "../api/types";
@@ -51,7 +51,7 @@ export function Settings() {
       </div>
 
       <div className="fx-settings-grid">
-        <Panel title={<h2>API key</h2>} kicker="Authorization: Bearer …" className="">
+        <Panel title={<h2>API key</h2>} kicker="Authorization: Bearer …" className="fx-rise" style={{ "--fx-rise-i": 0 } as CSSProperties}>
           <div className="fx-keyform">
             <div className="field">
               <label htmlFor="fx-keyspec">Key spec</label>
@@ -100,7 +100,7 @@ export function Settings() {
           </div>
         </Panel>
 
-        <Panel title={<h2>Connection</h2>} kicker="live probes (unauthenticated)" className="">
+        <Panel title={<h2>Connection</h2>} kicker="live probes (unauthenticated)" className="fx-rise" style={{ "--fx-rise-i": 1 } as CSSProperties}>
           <ConnectionDiagnostics />
           <div className="field" style={{ marginTop: "var(--fx-sp-4)" }}>
             <span className="kicker">Time format</span>
@@ -190,7 +190,7 @@ function DefinitionsPanel({ canRegister, hasKey }: { canRegister: boolean; hasKe
   const canSubmit = canRegister && name.trim().length > 0 && Number(version) >= 1 && stepsValid && !register.isPending;
 
   return (
-    <Panel title={<h2>Workflow definitions</h2>} kicker="GET/POST /v1/definitions" bodyClass="fx-panel__body--flush">
+    <Panel title={<h2>Workflow definitions</h2>} kicker="GET/POST /v1/definitions" bodyClass="fx-panel__body--flush" className="fx-rise" style={{ "--fx-rise-i": 2 } as CSSProperties}>
       {defs.isLoading && <div style={{ padding: 16 }}><LoadingRows rows={3} /></div>}
       {defs.isError && <div style={{ padding: 16 }}><ErrorState error={defs.error} /></div>}
       {defs.data && defs.data.length === 0 && (

@@ -10,13 +10,14 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 
 import { describeError } from "../api/hooks";
 import { ConnectionError } from "../api/errors";
-import { classificationStatus, stepStatus, workflowStatus, type StatusMeta } from "../theme/status";
+import { classificationStatus, stepStatus, workflowStatus, type StatusMeta, type StatusTone } from "../theme/status";
 import {
   IconAlert,
   IconCheck,
@@ -57,6 +58,7 @@ export function Panel({
   children,
   className = "",
   bodyClass = "",
+  style,
 }: {
   title?: ReactNode;
   kicker?: string;
@@ -64,9 +66,10 @@ export function Panel({
   children: ReactNode;
   className?: string;
   bodyClass?: string;
+  style?: CSSProperties;
 }) {
   return (
-    <section className={`panel fx-panel ${className}`}>
+    <section className={`panel fx-panel ${className}`} style={style}>
       {(title || actions) && (
         <header className="panel-head">
           <div className="panel-title">
@@ -78,6 +81,71 @@ export function Panel({
       )}
       <div className={`fx-panel__body ${bodyClass}`}>{children}</div>
     </section>
+  );
+}
+
+/* ------------------------------ animated count ----------------------------- */
+
+/** Smoothly tweens a number toward `target` whenever it changes (real data).
+ *  Uses requestAnimationFrame inside an effect (never during render), so it is
+ *  purity-safe. The first mount shows the value directly (no count-from-zero);
+ *  later polls animate from the previous value. Honors prefers-reduced-motion
+ *  by jumping straight to the target. */
+export function useCountUp(target: number, duration = 650): number {
+  const [display, setDisplay] = useState(target);
+  const prev = useRef(target);
+  useEffect(() => {
+    const from = prev.current;
+    prev.current = target;
+    if (from === target) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const dur = reduce ? 0 : duration;
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = dur <= 0 ? 1 : Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(from + (target - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return display;
+}
+
+/* -------------------------------- kpi card -------------------------------- */
+
+/** The one premium metric-card recipe, shared by the Overview command centre
+ *  and the execution inspector: eyebrow label, status-tinted icon, a large
+ *  tabular figure that eases on real change, an optional caption, a left accent
+ *  bar, a hover lift, and a staggered first reveal. */
+export function KpiCard({
+  kicker,
+  value,
+  sub,
+  icon,
+  tone = "neutral",
+  index = 0,
+}: {
+  kicker: string;
+  value: number;
+  sub?: ReactNode;
+  icon: ReactNode;
+  tone?: StatusTone | "neutral";
+  index?: number;
+}) {
+  const shown = useCountUp(value);
+  return (
+    <div
+      className={`fx-kpi__card fx-kpi__card--${tone} fx-rise`}
+      style={{ "--fx-rise-i": index } as CSSProperties}
+    >
+      <span className="fx-kpi__k">{kicker}</span>
+      <span className="fx-kpi__icon" aria-hidden="true">{icon}</span>
+      <span className="fx-kpi__v num">{shown.toLocaleString()}</span>
+      {sub && <span className="fx-kpi__sub">{sub}</span>}
+    </div>
   );
 }
 

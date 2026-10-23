@@ -6,8 +6,8 @@ import { Link } from "react-router";
 
 import { useMetrics, useReadyz, useWorkflows } from "../api/hooks";
 import { byLabel, gaugeValue, workflowCensus } from "../api/prom";
-import { workflowStatus, type StatusTone } from "../theme/status";
-import { Panel, SnapshotAt, EmptyState, ErrorState, LoadingRows, StatusBadge, TimeText, RelTime } from "../components/ui";
+import { workflowStatus } from "../theme/status";
+import { Panel, SnapshotAt, EmptyState, ErrorState, LoadingRows, StatusBadge, TimeText, RelTime, KpiCard } from "../components/ui";
 import { BarList, GaugeRing, StateStack } from "../components/charts";
 import {
   IconCheck,
@@ -17,24 +17,13 @@ import {
   IconAlert,
   IconWorkflows,
 } from "../icons";
-import type { ReactNode } from "react";
+import type { CSSProperties } from "react";
 import "./screens.css";
 
 const ACTIVE = ["QUEUED", "RUNNING", "RETRY_WAITING", "COMPENSATING", "CANCELLING"];
 const NEGATIVE = ["FAILED", "ABORTED"];
 
-function StatCard({ kicker, value, sub, icon, tone }: { kicker: string; value: ReactNode; sub?: ReactNode; icon: ReactNode; tone: StatusTone | "neutral" }) {
-  return (
-    <div className={`fx-stat fx-stat--${tone} panel`}>
-      <div className="fx-stat__icon" aria-hidden="true">{icon}</div>
-      <div className="fx-stat__body">
-        <span className="kicker">{kicker}</span>
-        <span className="fx-stat__value num">{value}</span>
-        {sub && <span className="fx-stat__sub">{sub}</span>}
-      </div>
-    </div>
-  );
-}
+const rise = (i: number) => ({ className: "fx-rise", style: { "--fx-rise-i": i } as CSSProperties });
 
 export function Overview() {
   const metrics = useMetrics();
@@ -103,24 +92,25 @@ export function Overview() {
         </div>
       )}
 
-      <div className="fx-stats">
+      <div className="fx-kpi">
         {metrics.isError ? (
-          <div className="fx-stats__err">
+          <div className="fx-kpi__err">
             <ErrorState error={metrics.error} onRetry={() => metrics.refetch()} />
           </div>
         ) : metrics.isLoading ? (
-          <LoadingRows rows={2} />
+          <div className="fx-kpi__err"><LoadingRows rows={2} /></div>
         ) : (
           <>
-            <StatCard kicker="Total workflows" value={total} sub={`${census.length > 0 ? "live census" : "no data yet"}`} icon={<IconWorkflows size={18} />} tone="neutral" />
-            <StatCard kicker="Completed" value={completed} sub="terminal · immutable" icon={<IconCheck size={18} />} tone="completed" />
-            <StatCard kicker="Active" value={active} sub="queued · running · retry · compensating · cancelling" icon={<IconPlay size={18} />} tone="running" />
-            <StatCard kicker="Failed / aborted" value={failed} sub="terminal · negative" icon={<IconAlert size={18} />} tone="negative" />
-            <StatCard
+            <KpiCard index={0} kicker="Total workflows" value={total} sub={census.length > 0 ? "live census" : "no data yet"} icon={<IconWorkflows size={16} />} tone="neutral" />
+            <KpiCard index={1} kicker="Completed" value={completed} sub="terminal · immutable" icon={<IconCheck size={16} />} tone="completed" />
+            <KpiCard index={2} kicker="Active" value={active} sub="queued · running · retry · compensating" icon={<IconPlay size={16} />} tone="running" />
+            <KpiCard index={3} kicker="Failed / aborted" value={failed} sub="terminal · negative" icon={<IconAlert size={16} />} tone="negative" />
+            <KpiCard
+              index={4}
               kicker="Manual intervention"
               value={manual}
               sub={<Link to="/dlq">open dead letters →</Link>}
-              icon={<IconDeadLetter size={18} />}
+              icon={<IconDeadLetter size={16} />}
               tone="manual"
             />
           </>
@@ -128,11 +118,12 @@ export function Overview() {
       </div>
 
       <div className="fx-grid-2">
-        <Panel title={<h2>State census</h2>} kicker="fathom_workflows_total">
+        <Panel {...rise(0)} title={<h2>State census</h2>} kicker="fathom_workflows_total">
           <StateStack slices={slices} total={total} />
         </Panel>
 
         <Panel
+          {...rise(1)}
           title={<h2>Recent activity</h2>}
           kicker="newest first"
           actions={
@@ -174,11 +165,11 @@ export function Overview() {
       </div>
 
       <div className="fx-grid-3">
-        <Panel title={<h2>Ingress classification</h2>} kicker="fathom_events_classified_total">
+        <Panel {...rise(2)} title={<h2>Ingress classification</h2>} kicker="fathom_events_classified_total">
           <BarList rows={classified} emptyText="No inbound events classified yet." />
         </Panel>
 
-        <Panel title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
+        <Panel {...rise(3)} title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
           {dlqDepth.length === 0 ? (
             <p className="fx-chart-empty">Queue is empty — nothing awaits manual intervention.</p>
           ) : (
@@ -186,7 +177,7 @@ export function Overview() {
           )}
         </Panel>
 
-        <Panel title={<h2>System pulse</h2>} kicker="bounded gauges">
+        <Panel {...rise(4)} title={<h2>System pulse</h2>} kicker="bounded gauges">
           <div className="fx-pulse-row">
             <GaugeRing value={oldestOpen} max={3600} label="Oldest open workflow (budget 1 h)" />
             <div className="fx-pulse-side">

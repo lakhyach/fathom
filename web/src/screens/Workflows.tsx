@@ -4,8 +4,8 @@
    offers exactly those two and says so (no fake full-text search). Rows are
    WorkflowSummary: the backend does not send step counts on list rows, so no
    step column is invented (gap honesty). */
-import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useMemo, useState, type CSSProperties } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { useWorkflows } from "../api/hooks";
 import { WORKFLOW_STATES, workflowStatus } from "../theme/status";
@@ -45,6 +45,7 @@ export function Workflows() {
   }
 
   const pages = useCursorStack();
+  const navigate = useNavigate();
   const query = useMemo(
     () => ({
       state: state || undefined,
@@ -129,7 +130,7 @@ export function Workflows() {
         </div>
       </div>
 
-      <Panel bodyClass="fx-panel__body--flush">
+      <Panel bodyClass="fx-panel__body--flush" className="fx-rise" style={{ "--fx-rise-i": 0 } as CSSProperties}>
         {list.isLoading && <LoadingRows rows={6} />}
         {list.isError && (
           <div style={{ padding: 16 }}>
@@ -162,12 +163,18 @@ export function Workflows() {
             </thead>
             <tbody>
               {list.data!.items.map((w) => (
-                <tr key={w.id}>
+                <tr
+                  key={w.id}
+                  className="fx-link-row"
+                  onClick={() => navigate(`/workflows/${w.id}`)}
+                >
                   <td>
                     <Link to={`/workflows/${w.id}`} className="mono fx-cell-id">
                       {truncate(w.id, 20)}…
                     </Link>
-                    <CopyChip value={w.id} label="id" />
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <CopyChip value={w.id} label="id" />
+                    </span>
                   </td>
                   <td>
                     <span className="fx-wfstate">{w.def_name}</span>

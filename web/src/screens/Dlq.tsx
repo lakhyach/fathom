@@ -5,7 +5,7 @@
    without mutating), then a confirmed write. retry-now is intentionally NOT
    exposed on a dead letter: the API refuses it and points at the workflow
    resource, so we mirror that truth instead of shipping a button that 422s. */
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { Link } from "react-router";
 
 import { useDlq, useResolveDlq } from "../api/hooks";
@@ -111,11 +111,27 @@ export function Dlq() {
         </Panel>
       )}
 
-      {items.map((d) => (
-        <Panel key={d.id} className="fx-dlq-card">
+      {dlq.data && items.length > 0 && (
+        <div className="fx-dlq-summary" role="status">
+          <span><b>{items.filter((d) => !d.resolved_at).length}</b> unresolved</span>
+          <span className="sep" aria-hidden="true" />
+          <span><b>{items.filter((d) => d.resolved_at).length}</b> resolved</span>
+          <span className="sep" aria-hidden="true" />
+          <span>{openOnly ? "open queue" : "all states"} · page {pages.depth + 1}</span>
+        </div>
+      )}
+
+      {items.map((d, idx) => (
+        <Panel
+          key={d.id}
+          className={`fx-dlq-card fx-rise${d.resolved_at ? " fx-dlq-card--resolved" : ""}`}
+          style={{ "--fx-rise-i": idx } as CSSProperties}
+        >
           <div className="fx-dlq-card__head">
             <span className="fx-dlq-class">{d.class}</span>
-            <span className="fx-feed__code mono">{d.reason_code}</span>
+            {d.reason_code && d.reason_code !== d.class && (
+              <span className="fx-feed__code mono">{d.reason_code}</span>
+            )}
             {d.resolved_at ? (
               <span className="fx-dim">resolved · {d.resolution ?? "—"} · <TimeText iso={d.resolved_at} /></span>
             ) : (
@@ -135,25 +151,41 @@ export function Dlq() {
           {d.detail != null && <pre className="fx-dlq-detail mono">{JSON.stringify(d.detail, null, 2)}</pre>}
 
           {!d.resolved_at && (
-            <div className="fx-dlq-actions">
-              <PreviewButton item={d} action="force-terminate" onPreview={setPreview} />
-              <button
-                type="button"
-                className="btn btn-sm btn-danger"
-                disabled={!canOperate}
-                onClick={() => setConfirming({ item: d, action: "force-terminate" })}
-              >
-                <IconArrowRight size={13} /> Force terminate
-              </button>
-              <PreviewButton item={d} action="complete-compensation" onPreview={setPreview} />
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={!canOperate}
-                onClick={() => setConfirming({ item: d, action: "complete-compensation" })}
-              >
-                <IconUndo size={13} /> Complete compensation
-              </button>
+            <div className="fx-dlq-actionset">
+              <div className="fx-dlq-action">
+                <span className="fx-dlq-action__label"><IconArrowRight size={14} /> Force terminate</span>
+                <span className="fx-dlq-action__hint">
+                  End the workflow as FAILED now, without running compensation. Already-compensated steps are left as-is.
+                </span>
+                <div className="fx-dlq-action__btns">
+                  <PreviewButton item={d} action="force-terminate" onPreview={setPreview} />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger"
+                    disabled={!canOperate}
+                    onClick={() => setConfirming({ item: d, action: "force-terminate" })}
+                  >
+                    Terminate
+                  </button>
+                </div>
+              </div>
+              <div className="fx-dlq-action">
+                <span className="fx-dlq-action__label"><IconUndo size={14} /> Complete compensation</span>
+                <span className="fx-dlq-action__hint">
+                  Run reverse compensation for completed steps, then settle the workflow as ABORTED.
+                </span>
+                <div className="fx-dlq-action__btns">
+                  <PreviewButton item={d} action="complete-compensation" onPreview={setPreview} />
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={!canOperate}
+                    onClick={() => setConfirming({ item: d, action: "complete-compensation" })}
+                  >
+                    Compensate
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

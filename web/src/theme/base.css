@@ -163,10 +163,16 @@ input, select, textarea {
 
 .panel-title {
   display: flex;
-  align-items: center;
-  gap: var(--fx-sp-2);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
   font-size: var(--fx-fs-body);
   font-weight: 620;
+}
+.panel-title .kicker {
+  line-height: 1;
+  margin-bottom: 0;
 }
 
 /* ---- buttons ---- */
@@ -368,6 +374,19 @@ input, select, textarea {
 
 .fade-up {
   animation: fx-fade-up var(--fx-dur-slow) var(--fx-ease) both;
+}
+
+/* staggered entrance for dashboard cards/panels. Runs once on mount only —
+   data refreshes update values in place, so the reveal never replays on poll.
+   --fx-rise-i is the item's ordinal (0-based); the delay is collapsed to 0 under
+   prefers-reduced-motion by the blanket rule in tokens.css. */
+@keyframes fx-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.fx-rise {
+  animation: fx-rise var(--fx-dur) var(--fx-ease) both;
+  animation-delay: calc(var(--fx-rise-i, 0) * 55ms);
 }
 
 /* data change flash, applied via key remount when values move */

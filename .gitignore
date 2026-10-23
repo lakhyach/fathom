@@ -51,3 +51,4 @@ Thumbs.db
 *.log
 tmp/
 .e2e-artifacts/
+.artifacts/

@@ -3,7 +3,7 @@
    event stream (gap G2). So this screen is honest about its scope: pick a
    workflow, then read its ordered audit trail and its classified inbound
    events. No cross-workflow "firehose" is invented. */
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import { useEvents, useInbound, useWorkflows } from "../api/hooks";
@@ -70,7 +70,7 @@ export function Events() {
         {wf && active.dataUpdatedAt > 0 && <SnapshotAt updatedAt={active.dataUpdatedAt} />}
       </div>
 
-      <Panel title={<h2>Scope</h2>} kicker="workflow selector">
+      <Panel title={<h2>Scope</h2>} kicker="workflow selector" className="fx-rise" style={{ "--fx-rise-i": 0 } as CSSProperties}>
         <div className="fx-filters">
           <form
             className="fx-filters__form"
@@ -111,7 +111,7 @@ export function Events() {
       </Panel>
 
       {!wf && (
-        <Panel>
+        <Panel className="fx-rise" style={{ "--fx-rise-i": 1 } as CSSProperties}>
           <EmptyState
             icon={<IconEvents size={22} />}
             title="No workflow in scope"
@@ -122,6 +122,8 @@ export function Events() {
 
       {wf && (
         <Panel
+          className="fx-rise"
+          style={{ "--fx-rise-i": 1 } as CSSProperties}
           title={<h2 className="fx-mono-head">Events · <CopyChip value={wf} label={truncate(wf, 16)} /></h2>}
           actions={
             <div className="fx-tabs" role="tablist" aria-label="Event source">

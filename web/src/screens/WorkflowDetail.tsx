@@ -28,6 +28,7 @@ import {
   EmptyState,
   ErrorState,
   JsonView,
+  KpiCard,
   LoadingRows,
   Panel,
   RelTime,
@@ -204,12 +205,8 @@ function KpiStrip() {
       ) : metrics.isLoading ? (
         <LoadingRows rows={1} />
       ) : (
-        cards.map((c) => (
-          <div key={c.k} className={`fx-kpi__card fx-kpi__card--${c.tone}`}>
-            <span className="fx-kpi__k">{c.k}</span>
-            <span className="fx-kpi__v num">{c.v}</span>
-            <span className="fx-kpi__icon" aria-hidden="true">{c.icon}</span>
-          </div>
+        cards.map((c, i) => (
+          <KpiCard key={c.k} index={i} kicker={c.k} value={c.v} tone={c.tone} icon={c.icon} />
         ))
       )}
     </div>
@@ -435,8 +432,8 @@ function EventLogPanel({ id }: { id: string | undefined }) {
                 <span className={`fx-log__lvl fx-log__lvl--${tone}`}>{a.kind}</span>
                 <span className="fx-log__msg">
                   {a.from_state ? `${workflowStatus(a.from_state).label} → ${workflowStatus(a.to_state).label}` : workflowStatus(a.to_state).label}
-                  <span className="fx-log__code mono">{a.reason_code}</span>
                 </span>
+                <span className="fx-log__code mono">{a.reason_code}</span>
               </li>
             );
           })}

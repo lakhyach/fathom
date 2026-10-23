@@ -3,7 +3,7 @@
    as durable totals; there is no time-series history endpoint (gap G4), so no
    sparklines or rate(Δ) curves are drawn. The raw exposition snapshot is
    listed exhaustively so an operator can always see the ground truth. */
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 
 import { useHealthz, useMetrics, useReadyz } from "../api/hooks";
 import { byLabel, gaugeValue, workflowCensus } from "../api/prom";
@@ -12,6 +12,8 @@ import { BarList, GaugeRing, StateStack, TransitionBars } from "../components/ch
 import { IconPlug } from "../icons";
 import type { Sample } from "../api/prom";
 import "./screens.css";
+
+const rise = (i: number) => ({ className: "fx-rise", style: { "--fx-rise-i": i } as CSSProperties });
 
 function fmtVal(name: string, v: number): string {
   if (name.endsWith("_age_seconds") || name.endsWith("_lag_seconds")) return humanDuration(v * 1000);
@@ -89,27 +91,27 @@ export function Metrics() {
       {map && (
         <>
           <div className="fx-grid-2">
-            <Panel title={<h2>Workflow census</h2>} kicker="fathom_workflows_total">
+            <Panel {...rise(0)} title={<h2>Workflow census</h2>} kicker="fathom_workflows_total">
               <StateStack slices={slices} total={total} />
             </Panel>
-            <Panel title={<h2>Transitions</h2>} kicker="fathom_workflow_transitions_total · by edge">
+            <Panel {...rise(1)} title={<h2>Transitions</h2>} kicker="fathom_workflow_transitions_total · by edge">
               <TransitionBars rows={transitions} />
             </Panel>
           </div>
 
           <div className="fx-grid-3">
-            <Panel title={<h2>Ingress</h2>} kicker="fathom_events_classified_total">
+            <Panel {...rise(2)} title={<h2>Ingress</h2>} kicker="fathom_events_classified_total">
               <BarList rows={classified} emptyText="No events classified yet." />
             </Panel>
-            <Panel title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
+            <Panel {...rise(3)} title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
               {dlqDepth.length === 0 ? <p className="fx-chart-empty">Dead-letter queue is empty.</p> : <BarList rows={dlqDepth} tone="violet" />}
             </Panel>
-            <Panel title={<h2>Relay publish lag</h2>} kicker="fathom_relay_publish_lag_seconds">
+            <Panel {...rise(4)} title={<h2>Relay publish lag</h2>} kicker="fathom_relay_publish_lag_seconds">
               {relayLag.length === 0 ? <p className="fx-chart-empty">No relay registered with this process.</p> : <BarList rows={relayLag} tone="blue" />}
             </Panel>
           </div>
 
-          <Panel title={<h2>Ageing &amp; backlog</h2>} kicker="bounded gauges">
+          <Panel {...rise(5)} title={<h2>Ageing &amp; backlog</h2>} kicker="bounded gauges">
             <div className="fx-pulse-row">
               <GaugeRing value={oldestOpen} max={3600} label="Oldest open workflow (1 h)" />
               <GaugeRing value={oldestDlq} max={86400} label="Oldest dead letter (24 h)" />
@@ -138,7 +140,7 @@ export function Metrics() {
             </div>
           </Panel>
 
-          <Panel title={<h2>Raw series</h2>} kicker="every fathom_* sample served" bodyClass="fx-panel__body--flush">
+          <Panel {...rise(6)} title={<h2>Raw series</h2>} kicker="every fathom_* sample served" bodyClass="fx-panel__body--flush">
             <table className="fx-series-table">
               <caption className="sr-only">All <code>fathom_</code>-prefixed metric series in this scrape</caption>
               <tbody>
