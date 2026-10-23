@@ -1,0 +1,9 @@
+node_modules
+dist
+*.tsbuildinfo
+.DS_Store
+# transient dev-server logs from manual validation runs — never commit
+*.log
+# local connection settings for the dev proxy target — never commit env files
+.env
+.env.local

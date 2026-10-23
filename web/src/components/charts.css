@@ -1,0 +1,165 @@
+/* Styles for the hand-built chart components. */
+
+.fx-chart-empty {
+  padding: var(--fx-sp-4) var(--fx-sp-2);
+  font-size: var(--fx-fs-small);
+  color: var(--fx-ink-faint);
+  text-align: center;
+  border: var(--fx-hair) dashed var(--fx-line);
+  border-radius: var(--fx-r-md);
+}
+
+/* ---- stacked census bar ---- */
+.fx-stack__bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--fx-r-pill);
+  overflow: hidden;
+  background: var(--fx-inset);
+  border: var(--fx-hair) solid var(--fx-line-faint);
+}
+.fx-stack__seg {
+  height: 100%;
+  min-width: 3px;
+  transition: width var(--fx-dur-slow) var(--fx-ease);
+}
+.fx-stack__seg--completed { background: var(--fx-st-completed); }
+.fx-stack__seg--running { background: var(--fx-st-running); }
+.fx-stack__seg--compensating { background: var(--fx-st-compensating); }
+.fx-stack__seg--negative { background: var(--fx-st-negative); }
+.fx-stack__seg--manual { background: var(--fx-st-manual); }
+.fx-stack__seg--pending { background: var(--fx-st-pending); }
+.fx-stack__seg--warn { background: var(--fx-st-warn); }
+
+.fx-stack__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fx-sp-2) var(--fx-sp-4);
+  list-style: none;
+  margin-top: var(--fx-sp-3);
+}
+.fx-stack__legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-muted);
+}
+.fx-stack__count {
+  color: var(--fx-ink);
+  font-weight: 620;
+}
+.fx-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+}
+.fx-dot--completed { background: var(--fx-st-completed); }
+.fx-dot--running { background: var(--fx-st-running); }
+.fx-dot--compensating { background: var(--fx-st-compensating); }
+.fx-dot--negative { background: var(--fx-st-negative); }
+.fx-dot--manual { background: var(--fx-st-manual); }
+.fx-dot--pending { background: var(--fx-st-pending); }
+.fx-dot--warn { background: var(--fx-st-warn); }
+
+/* ---- bar list ---- */
+.fx-bars {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-2);
+}
+.fx-bars__row {
+  display: grid;
+  grid-template-columns: minmax(90px, 150px) 1fr 44px;
+  align-items: center;
+  gap: var(--fx-sp-2);
+  font-size: var(--fx-fs-caption);
+}
+.fx-bars__key {
+  color: var(--fx-ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fx-bars__track {
+  height: 8px;
+  border-radius: var(--fx-r-pill);
+  background: var(--fx-inset);
+  border: var(--fx-hair) solid var(--fx-line-faint);
+  overflow: hidden;
+}
+.fx-bars__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fx-blue);
+  transition: width var(--fx-dur-slow) var(--fx-ease);
+}
+.fx-bars__fill--violet {
+  background: var(--fx-violet);
+}
+.fx-bars__val {
+  text-align: right;
+  color: var(--fx-ink);
+  font-weight: 560;
+}
+
+/* ---- gauge ---- */
+.fx-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fx-sp-1);
+}
+.fx-gauge__arc {
+  transition: stroke-dasharray var(--fx-dur-slow) var(--fx-ease);
+}
+.fx-gauge__text {
+  font-family: var(--fx-font-ui);
+  font-size: 15px;
+  font-weight: 640;
+  fill: var(--fx-ink);
+}
+.fx-gauge--hot .fx-gauge__text {
+  fill: var(--fx-st-negative);
+}
+.fx-gauge__label {
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-muted);
+  text-align: center;
+}
+
+/* ---- transition flow ---- */
+.fx-tflow {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-2);
+}
+.fx-tflow__row {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-2);
+  font-size: var(--fx-fs-caption);
+}
+.fx-tflow__arrow {
+  color: var(--fx-ink-faint);
+}
+.fx-tflow__state {
+  font-weight: 560;
+}
+.fx-tflow__state--completed { color: var(--fx-st-completed); }
+.fx-tflow__state--running { color: var(--fx-st-running); }
+.fx-tflow__state--compensating { color: var(--fx-st-compensating); }
+.fx-tflow__state--negative { color: var(--fx-st-negative); }
+.fx-tflow__state--manual { color: var(--fx-st-manual); }
+.fx-tflow__state--pending { color: var(--fx-st-pending); }
+.fx-tflow__state--warn { color: var(--fx-st-warn); }
+.fx-tflow__count {
+  margin-left: auto;
+  color: var(--fx-ink);
+  font-weight: 620;
+}

@@ -1,0 +1,367 @@
+/* Styles for the shared UI primitives (components/ui.tsx). */
+
+/* ---- status badge: colour + text, never colour alone ---- */
+.fx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px 2px 7px;
+  font-size: var(--fx-fs-caption);
+  font-weight: 560;
+  line-height: 18px;
+  border-radius: var(--fx-r-pill);
+  border: var(--fx-hair) solid;
+  white-space: nowrap;
+}
+.fx-badge--sm {
+  padding: 0 7px 0 5px;
+  font-size: var(--fx-fs-micro);
+  line-height: 16px;
+}
+.fx-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.fx-badge__icon {
+  flex: none;
+}
+
+.fx-badge--completed {
+  color: var(--fx-st-completed);
+  background: oklch(0.77 0.14 178 / 0.09);
+  border-color: oklch(0.77 0.14 178 / 0.35);
+}
+.fx-badge--running {
+  color: var(--fx-st-running);
+  background: oklch(0.8 0.14 85 / 0.09);
+  border-color: oklch(0.8 0.14 85 / 0.35);
+}
+.fx-badge--running .fx-badge__dot {
+  animation: fx-pulse 1.6s ease-in-out infinite;
+}
+.fx-badge--compensating {
+  color: var(--fx-st-compensating);
+  background: oklch(0.72 0.15 300 / 0.1);
+  border-color: oklch(0.72 0.15 300 / 0.38);
+}
+.fx-badge--compensating .fx-badge__dot {
+  animation: fx-pulse 1.6s ease-in-out infinite;
+}
+.fx-badge--negative {
+  color: var(--fx-st-negative);
+  background: oklch(0.66 0.19 15 / 0.1);
+  border-color: oklch(0.66 0.19 15 / 0.38);
+}
+.fx-badge--manual {
+  color: var(--fx-st-manual);
+  background: oklch(0.62 0.22 25 / 0.13);
+  border-color: oklch(0.62 0.22 25 / 0.5);
+}
+.fx-badge--pending {
+  color: var(--fx-st-pending);
+  background: oklch(0.65 0.02 260 / 0.08);
+  border-color: oklch(0.65 0.02 260 / 0.3);
+}
+.fx-badge--warn {
+  color: var(--fx-st-warn);
+  background: oklch(0.78 0.13 95 / 0.08);
+  border-color: oklch(0.78 0.13 95 / 0.32);
+}
+
+/* ---- panel ---- */
+.fx-panel__body {
+  padding: var(--fx-sp-4);
+}
+.fx-panel__body--flush {
+  padding: 0;
+  /* wide tables (workflows, metrics, DLQ) must scroll *inside* the panel at
+     narrow widths rather than push the whole document sideways. */
+  overflow-x: auto;
+  max-width: 100%;
+}
+.fx-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-2);
+}
+
+/* ---- snapshot / time ---- */
+.fx-snapshot {
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-faint);
+  white-space: nowrap;
+}
+.fx-time {
+  color: var(--fx-ink-secondary);
+  font-size: var(--fx-fs-caption);
+}
+.fx-dim {
+  color: var(--fx-ink-faint);
+}
+
+/* ---- copy chip ---- */
+.fx-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-secondary);
+  background: var(--fx-inset);
+  border: var(--fx-hair) solid var(--fx-line-faint);
+  border-radius: var(--fx-r-sm);
+  transition: border-color var(--fx-dur-fast) var(--fx-ease), color var(--fx-dur-fast) var(--fx-ease);
+}
+.fx-copy:hover {
+  border-color: var(--fx-line-strong);
+  color: var(--fx-ink);
+}
+.fx-copy__ok {
+  color: var(--fx-st-completed);
+}
+
+/* ---- empty / error / loading ---- */
+.fx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fx-sp-2);
+  padding: var(--fx-sp-7) var(--fx-sp-4);
+  text-align: center;
+}
+.fx-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--fx-ink-faint);
+  background: var(--fx-inset);
+  border: var(--fx-hair) solid var(--fx-line);
+  margin-bottom: var(--fx-sp-1);
+}
+.fx-empty__title {
+  font-size: var(--fx-fs-body);
+  font-weight: 600;
+  color: var(--fx-ink-secondary);
+}
+.fx-empty__hint {
+  max-width: 46ch;
+  font-size: var(--fx-fs-small);
+  color: var(--fx-ink-faint);
+}
+
+.fx-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fx-sp-3);
+  padding: var(--fx-sp-3) var(--fx-sp-4);
+  border-radius: var(--fx-r-md);
+  border: var(--fx-hair) solid oklch(0.66 0.19 15 / 0.4);
+  background: oklch(0.66 0.19 15 / 0.07);
+}
+.fx-error--down {
+  border-color: oklch(0.65 0.02 260 / 0.4);
+  background: oklch(0.65 0.02 260 / 0.06);
+}
+.fx-error__mark {
+  flex: none;
+  padding-top: 2px;
+  color: var(--fx-st-negative);
+}
+.fx-error--down .fx-error__mark {
+  color: var(--fx-ink-muted);
+}
+.fx-error__plug {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px dashed var(--fx-ink-faint);
+}
+.fx-error__text {
+  flex: 1;
+  min-width: 0;
+}
+.fx-error__headline {
+  font-size: var(--fx-fs-body);
+  font-weight: 620;
+  color: var(--fx-ink);
+}
+.fx-error__detail {
+  margin-top: 2px;
+  font-size: var(--fx-fs-small);
+  color: var(--fx-ink-secondary);
+}
+.fx-error__trace {
+  margin-top: 4px;
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-faint);
+}
+
+.fx-loading-rows {
+  padding: var(--fx-sp-2) 0;
+}
+
+/* ---- modal ---- */
+.fx-modal__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--fx-sp-4);
+  background: oklch(0.06 0.01 265 / 0.72);
+  backdrop-filter: blur(3px);
+  animation: fx-fade-up var(--fx-dur) var(--fx-ease) both;
+}
+.fx-modal {
+  width: min(520px, 100%);
+  background: var(--fx-panel);
+  box-shadow: var(--fx-shadow-pop);
+  animation: fx-fade-up var(--fx-dur) var(--fx-ease) both;
+}
+.fx-modal--wide {
+  width: min(780px, 100%);
+}
+.fx-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--fx-sp-3) var(--fx-sp-4);
+  border-bottom: var(--fx-hair) solid var(--fx-line-faint);
+}
+.fx-modal__title {
+  font-size: var(--fx-fs-lead);
+}
+.fx-modal__body {
+  padding: var(--fx-sp-4);
+  max-height: min(64vh, 560px);
+  overflow: auto;
+}
+.fx-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--fx-sp-2);
+  padding: var(--fx-sp-3) var(--fx-sp-4);
+  border-top: var(--fx-hair) solid var(--fx-line-faint);
+}
+
+/* ---- confirm ---- */
+.fx-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-3);
+}
+.fx-confirm__row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fx-fs-small);
+  color: var(--fx-ink-secondary);
+}
+.fx-confirm__ep code {
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-blue-bright);
+  background: var(--fx-inset);
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+  word-break: break-all;
+}
+
+/* ---- toasts ---- */
+.fx-toasts {
+  position: fixed;
+  right: var(--fx-sp-4);
+  bottom: var(--fx-sp-4);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-2);
+}
+.fx-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-2);
+  padding: 10px 14px;
+  font-size: var(--fx-fs-small);
+  border-radius: var(--fx-r-md);
+  background: var(--fx-panel-raised);
+  border: var(--fx-hair) solid var(--fx-line-strong);
+  box-shadow: var(--fx-shadow-pop);
+  color: var(--fx-ink);
+  max-width: 380px;
+}
+.fx-toast--ok {
+  border-color: oklch(0.77 0.14 178 / 0.5);
+}
+.fx-toast--ok svg {
+  color: var(--fx-st-completed);
+}
+.fx-toast--bad {
+  border-color: oklch(0.66 0.19 15 / 0.55);
+}
+.fx-toast--bad svg {
+  color: var(--fx-st-negative);
+}
+.fx-toast--warn svg {
+  color: var(--fx-st-warn);
+}
+
+/* ---- json viewer ---- */
+.fx-json__pre {
+  margin-top: var(--fx-sp-2);
+  padding: var(--fx-sp-3);
+  font-size: var(--fx-fs-caption);
+  line-height: 1.55;
+  background: var(--fx-inset);
+  border: var(--fx-hair) solid var(--fx-line-faint);
+  border-radius: var(--fx-r-sm);
+  overflow: auto;
+  max-height: 340px;
+  white-space: pre;
+}
+
+/* ---- pager ---- */
+.fx-pager {
+  display: flex;
+  align-items: center;
+  gap: var(--fx-sp-3);
+  padding: var(--fx-sp-2) var(--fx-sp-3);
+  border-top: var(--fx-hair) solid var(--fx-line-faint);
+}
+.fx-pager__page {
+  font-size: var(--fx-fs-caption);
+  color: var(--fx-ink-faint);
+  min-width: 56px;
+  text-align: center;
+}
+
+/* ---- notes & forms ---- */
+.fx-note {
+  padding: var(--fx-sp-2) var(--fx-sp-3);
+  font-size: var(--fx-fs-small);
+  color: var(--fx-ink-secondary);
+  background: var(--fx-inset);
+  border: var(--fx-hair) solid var(--fx-line);
+  border-radius: var(--fx-r-sm);
+}
+.fx-note--warn {
+  color: var(--fx-st-warn);
+  border-color: oklch(0.78 0.13 95 / 0.35);
+  background: oklch(0.78 0.13 95 / 0.06);
+}
+.fx-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fx-sp-3);
+}
+.fx-form-grid__err {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

@@ -1,0 +1,116 @@
+/* ============================================================
+   Fathom design tokens — the single source of visual truth.
+   Palette: deep obsidian / midnight-navy surfaces, restrained
+   electric-blue + violet accents, one semantic status set.
+   All colours oklch for perceptual uniformity; every fg/bg pair
+   below passes WCAG AA on its surface (status colours also always
+   pair with text badges — never colour alone, per UI spec §4).
+   ============================================================ */
+
+:root {
+  /* ---- surfaces (obsidian -> midnight navy, cool hue ~265) ---- */
+  --fx-void: oklch(0.13 0.018 265);        /* app background        */
+  --fx-abyss: oklch(0.105 0.016 265);      /* sidebar / chrome      */
+  --fx-panel: oklch(0.165 0.02 265);       /* card surface          */
+  --fx-panel-raised: oklch(0.195 0.024 265); /* hover / raised card  */
+  --fx-inset: oklch(0.125 0.018 265);      /* wells, code blocks    */
+  --fx-line: oklch(0.28 0.03 265 / 0.55);  /* hairline border       */
+  --fx-line-strong: oklch(0.36 0.04 265 / 0.7);
+  --fx-line-faint: oklch(0.24 0.025 265 / 0.45);
+
+  /* ---- ink (text) ---- */
+  --fx-ink: oklch(0.94 0.01 255);          /* primary text          */
+  --fx-ink-secondary: oklch(0.78 0.015 255);
+  --fx-ink-muted: oklch(0.62 0.02 260);    /* captions, meta        */
+  --fx-ink-faint: oklch(0.5 0.02 260);     /* disabled, hints       */
+
+  /* ---- interactive accents (electric blue + violet) ---- */
+  --fx-blue: oklch(0.66 0.17 255);
+  --fx-blue-bright: oklch(0.74 0.15 255);
+  --fx-blue-deep: oklch(0.52 0.16 258);
+  --fx-violet: oklch(0.62 0.19 292);
+  --fx-violet-bright: oklch(0.71 0.16 292);
+  --fx-accent-ink: oklch(0.98 0.005 255);  /* text on accent fill   */
+  --fx-accent-soft: oklch(0.66 0.17 255 / 0.13);
+  --fx-accent-softer: oklch(0.66 0.17 255 / 0.07);
+  --fx-gradient-accent: linear-gradient(135deg, var(--fx-blue) 0%, var(--fx-violet) 100%);
+  --fx-gradient-nav: linear-gradient(120deg, oklch(0.55 0.18 262 / 0.32), oklch(0.55 0.2 295 / 0.26));
+
+  /* ---- semantic status set (UI spec §4; text badge always co-renders) ---- */
+  --fx-st-completed: oklch(0.77 0.14 178);        /* teal   */
+  --fx-st-running: oklch(0.8 0.14 85);            /* amber  */
+  --fx-st-compensating: oklch(0.72 0.15 300);     /* violet — rollback is its own story */
+  --fx-st-negative: oklch(0.66 0.19 15);          /* rose   */
+  --fx-st-manual: oklch(0.62 0.22 25);            /* red + persistent icon */
+  --fx-st-pending: oklch(0.65 0.02 260);          /* neutral steel */
+  --fx-st-warn: oklch(0.78 0.13 95);
+  --fx-st-soft: 0.14;                             /* alpha for status washes */
+
+  /* ---- glow / depth (restrained; never decorative on data) ---- */
+  --fx-glow-blue: 0 0 0 1px oklch(0.66 0.17 255 / 0.4), 0 0 18px oklch(0.66 0.17 255 / 0.22);
+  --fx-glow-violet: 0 0 0 1px oklch(0.62 0.19 292 / 0.38), 0 0 16px oklch(0.62 0.19 292 / 0.2);
+  --fx-shadow-panel: 0 1px 2px oklch(0.05 0.01 265 / 0.5), 0 8px 24px -12px oklch(0.05 0.01 265 / 0.55);
+  --fx-shadow-pop: 0 2px 8px oklch(0.05 0.01 265 / 0.6), 0 24px 48px -16px oklch(0.05 0.01 265 / 0.7);
+
+  /* ---- typography ---- */
+  --fx-font-ui: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fx-font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+  --fx-fs-micro: 10px;   /* uppercase kickers (letter-spaced) */
+  --fx-fs-caption: 11px;
+  --fx-fs-small: 12px;
+  --fx-fs-body: 13px;
+  --fx-fs-lead: 15px;
+  --fx-fs-title: 19px;
+  --fx-fs-display: 26px; /* used once per screen max          */
+  --fx-lh-tight: 1.25;
+  --fx-lh-normal: 1.5;
+  --fx-ls-caps: 0.08em;
+
+  /* ---- spacing scale (4px base, compact deliberate rhythm) ---- */
+  --fx-sp-1: 4px;
+  --fx-sp-2: 8px;
+  --fx-sp-3: 12px;
+  --fx-sp-4: 16px;
+  --fx-sp-5: 24px;
+  --fx-sp-6: 32px;
+  --fx-sp-7: 48px;
+  --fx-sp-8: 64px;
+
+  /* ---- geometry ---- */
+  --fx-r-sm: 6px;
+  --fx-r-md: 10px;
+  --fx-r-lg: 14px;
+  --fx-r-pill: 999px;
+  --fx-hair: 1px;
+
+  /* ---- motion ---- */
+  --fx-ease: cubic-bezier(0.22, 0.61, 0.21, 1);
+  --fx-dur-fast: 120ms;
+  --fx-dur: 200ms;
+  --fx-dur-slow: 340ms;
+
+  /* ---- layout ---- */
+  --fx-sidebar-w: 232px;
+  --fx-topbar-h: 56px;
+  --fx-content-max: 1560px;
+
+  color-scheme: dark;
+}
+
+/* Reduced motion: our motion is CSS-driven, so one blanket rule is the
+   mechanism — it collapses transition/animation durations to ~0 for every
+   element (including React Flow's own animated-edge dash and the fx-pulse
+   status dots), so no JS reduced-motion gate is needed. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fx-dur-fast: 0ms;
+    --fx-dur: 0ms;
+    --fx-dur-slow: 0ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
