@@ -194,6 +194,10 @@ func (w *Workflow) completedCompensable() []*Step {
 // ResultEvent is an inbound participant result (DATA §E), reduced to the
 // identity + outcome fields the machine reasons about. ExpectedVersion is the
 // workflow version the reader observed; a mismatch is rejected as stale.
+// TraceID (32-hex, from the envelope's traceparent) is not reasoned about by
+// the machine — it rides the struct so the store stamps it onto audit rows and
+// the command envelopes the transition emits, keeping one trace per workflow
+// run (REQ-OP-6).
 type ResultEvent struct {
 	EventID         string
 	WorkflowID      string
@@ -202,6 +206,7 @@ type ResultEvent struct {
 	Outcome         Outcome
 	ErrorClass      ErrorClass
 	ExpectedVersion int64
+	TraceID         string
 }
 
 // Result is the outcome of applying an event: the classification, the new

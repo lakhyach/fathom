@@ -60,13 +60,44 @@ const (
 	EnvProd Environment = "prod"
 )
 
+// Mode selects which subsystems a process runs (PHASE_5_SPEC_CHECKLIST gap 6:
+// ONE binary, mode-selected — no separate mains to drift apart).
+type Mode string
+
+const (
+	ModeControl Mode = "control" // API + scheduler (the lite single-node deployment)
+	ModeWorker  Mode = "worker"  // participant execution loop only
+	ModeRelay   Mode = "relay"   // outbox relay only (requires Kafka brokers)
+	ModeAll     Mode = "all"     // everything this process can run from config
+)
+
+func parseMode(v string) (Mode, error) {
+	switch m := Mode(v); m {
+	case ModeControl, ModeWorker, ModeRelay, ModeAll:
+		return m, nil
+	default:
+		return "", fmt.Errorf("must be one of control, worker, relay, all (got %q)", v)
+	}
+}
+
+// ServesHTTP reports whether the mode exposes the REST surface (and therefore
+// whether API keys are required).
+func (m Mode) ServesHTTP() bool { return m == ModeControl || m == ModeAll }
+
 // Config is the validated application configuration.
 type Config struct {
-	Environment     Environment
-	LogLevel        string
-	HTTPListenAddr  string
-	ShutdownTimeout time.Duration
-	DatabaseURL     Secret
+	Environment       Environment
+	Mode              Mode
+	LogLevel          string
+	HTTPListenAddr    string
+	ShutdownTimeout   time.Duration
+	DatabaseURL       Secret
+	APIKeys           Secret // "label:role:key,..." — secret material, never logged
+	KafkaBrokers      []string
+	RelayID           string
+	WorkerID          string
+	ReadyMaxOutboxAge time.Duration
+	DevEcho           bool // registers the deterministic echo sample participant
 }
 
 // Problems is a set of human-readable configuration errors. It never contains
@@ -86,6 +117,14 @@ const (
 	keyHTTPAddr    = "FATHOM_HTTP_ADDR"
 	keyShutdown    = "FATHOM_SHUTDOWN_TIMEOUT"
 	keyDatabaseURL = "FATHOM_DATABASE_URL"
+
+	keyMode           = "FATHOM_MODE"
+	keyAPIKeys        = "FATHOM_API_KEYS"
+	keyKafkaBrokers   = "FATHOM_KAFKA_BROKERS"
+	keyRelayID        = "FATHOM_RELAY_ID"
+	keyWorkerID       = "FATHOM_WORKER_ID"
+	keyReadyMaxOutbox = "FATHOM_READY_MAX_OUTBOX_AGE"
+	keyDevEcho        = "FATHOM_DEV_ECHO"
 )
 
 var validLogLevels = map[string]bool{
@@ -96,10 +135,12 @@ var validLogLevels = map[string]bool{
 // The default HTTP address binds to loopback only, per the security baseline.
 func Default() Config {
 	return Config{
-		Environment:     EnvDev,
-		LogLevel:        "info",
-		HTTPListenAddr:  "127.0.0.1:8080",
-		ShutdownTimeout: 10 * time.Second,
+		Environment:       EnvDev,
+		Mode:              ModeAll,
+		LogLevel:          "info",
+		HTTPListenAddr:    "127.0.0.1:8080",
+		ShutdownTimeout:   10 * time.Second,
+		ReadyMaxOutboxAge: 5 * time.Minute,
 	}
 }
 
@@ -117,6 +158,15 @@ func Load(getenv func(string) (string, bool)) (Config, error) {
 			cfg.Environment = Environment(v)
 		default:
 			problems = append(problems, fmt.Sprintf("%s must be %q or %q", keyEnv, EnvDev, EnvProd))
+		}
+	}
+
+	if v, ok := lookup(getenv, keyMode); ok && v != "" {
+		m, err := parseMode(v)
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("%s %s", keyMode, err))
+		} else {
+			cfg.Mode = m
 		}
 	}
 
@@ -154,6 +204,48 @@ func Load(getenv func(string) (string, bool)) (Config, error) {
 		}
 	} else {
 		problems = append(problems, fmt.Sprintf("%s is required", keyDatabaseURL))
+	}
+
+	// API keys: required exactly when the mode serves the REST surface. The
+	// local-only bearer boundary (ADR-013, checklist gap 9) is not optional
+	// there — an API with no keys is an unauthenticated control plane.
+	if v, ok := lookup(getenv, keyAPIKeys); ok && v != "" {
+		cfg.APIKeys = NewSecret(v)
+	} else if cfg.Mode.ServesHTTP() {
+		problems = append(problems, fmt.Sprintf("%s is required when %s serves the HTTP API (label:role:key entries; see DEVELOPMENT)", keyAPIKeys, keyMode))
+	}
+
+	if v, ok := lookup(getenv, keyKafkaBrokers); ok && v != "" {
+		for _, b := range strings.Split(v, ",") {
+			if b = strings.TrimSpace(b); b != "" {
+				cfg.KafkaBrokers = append(cfg.KafkaBrokers, b)
+			}
+		}
+	}
+
+	if v, ok := lookup(getenv, keyRelayID); ok {
+		cfg.RelayID = strings.TrimSpace(v)
+	}
+	if v, ok := lookup(getenv, keyWorkerID); ok {
+		cfg.WorkerID = strings.TrimSpace(v)
+	}
+
+	if v, ok := lookup(getenv, keyReadyMaxOutbox); ok && v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil || d <= 0 {
+			problems = append(problems, fmt.Sprintf("%s must be a positive duration (e.g. 5m)", keyReadyMaxOutbox))
+		} else {
+			cfg.ReadyMaxOutboxAge = d
+		}
+	}
+
+	if v, ok := lookup(getenv, keyDevEcho); ok && v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("%s must be a boolean", keyDevEcho))
+		} else {
+			cfg.DevEcho = b
+		}
 	}
 
 	if len(problems) > 0 {

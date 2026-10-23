@@ -3,7 +3,7 @@
 A distributed **workflow control plane** with a real-time operations cockpit: observable,
 recoverable workflow execution with verifiable failure handling.
 
-> **Status: Phase 2 — specification & foundation locked. No engine code exists yet.**
+> **Status: through Phase 5 — durable engine, workers, recovery scheduler, REST API, and the pgoutbox relay are implemented and validated locally** (see `docs/PHASE_4_VALIDATION_REPORT.md`, `docs/PHASE_5_VALIDATION_REPORT.md`).
 > Nothing in this repository may be described as "implemented" unless a named test
 > proves it. See `docs/` for the contracts; see the Phase 1 audit
 > (`E:\Projects\saga-orchestration-go\docs\`) for the evidence base this project is
@@ -24,15 +24,14 @@ repository has **no remote** — it must never push to the upstream author's rep
 ## Repository layout
 
 ```
-docs/          Phase 2 specification deliverables (the contracts)
-cmd/           binary entrypoints          (Phase 3 — empty)
-internal/      engine, store, relay, api   (Phase 3 — empty)
-db/            migrations                  (Phase 3 — empty)
-deploy/        docker compose, connect     (Phase 3 — empty)
-web/           cockpit (React SPA)         (Phase 5 — empty)
-tests/         e2e scripts, fixtures       (Phase 3 — empty)
-scripts/       dev/CI helpers              (Phase 3 — empty)
-tools/depprobe dependency-portability probe (built, evidence in docs/ARCHITECTURE_DECISIONS.md ADR-005)
+docs/          specification deliverables (the contracts) + per-phase checklists & validation reports
+cmd/fathom/    ONE binary, modes: control | worker | relay | all       (Phase 5)
+internal/      engine, store, worker, scheduler, relay, api, health, metrics, tracing (Phase 5)
+db/            embedded versioned migrations 0001–0002                 (Phase 4–5)
+deploy/        docker compose smoke (Kafka+Debezium CDC proof)         (Phase 3)
+web/           cockpit (React SPA)                                     (later phase — not started)
+tools/         separate module: CGO portability probe + franz-go round-trip smoke
+.github/workflows/  ci.yml + cdc-integration.yml (authored; run once a remote exists)
 ```
 
 ## Toolchain (pinned, verified on this host 2026-10-23)

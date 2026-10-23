@@ -57,7 +57,8 @@ func ctxc() context.Context { return context.Background() }
 func reset(t *testing.T) {
 	t.Helper()
 	_, err := testStore.Pool().Exec(ctxc(),
-		`TRUNCATE attempt, step, processed_events, inbound_event, outbox, api_idempotency, dead_letter, audit_event, workflow CASCADE`)
+		`TRUNCATE attempt, step, processed_events, inbound_event, outbox, api_idempotency, dead_letter, audit_event, workflow,
+		         operator_action, relay_checkpoint, workflow_definition CASCADE`)
 	if err != nil {
 		t.Fatalf("reset: %v", err)
 	}
@@ -155,8 +156,8 @@ func TestStore_MigrateFreshAndVersion(t *testing.T) {
 	if dirty {
 		t.Fatal("schema is dirty after fresh migrate")
 	}
-	if v != 1 {
-		t.Fatalf("schema version = %d, want 1", v)
+	if v != 2 {
+		t.Fatalf("schema version = %d, want 2 (0001 + 0002)", v)
 	}
 	// A second Migrate must be a safe no-op (reproducible apply).
 	if err := testStore.Migrate(ctxc()); err != nil {
@@ -519,7 +520,7 @@ func TestStore_DS1Regression_TerminalNotReopened(t *testing.T) {
 		t.Fatal("late event not recorded as TERMINAL_IGNORED")
 	}
 	// Operator cancel of a terminal workflow is a typed refusal, not a rewrite.
-	if _, err := testStore.Cancel(ctxc(), done.ID, done.Version); err == nil {
+	if _, err := testStore.Cancel(ctxc(), done.ID, done.Version, Operator{}); err == nil {
 		t.Fatal("cancel of terminal workflow must be refused")
 	} else {
 		var tie engine.TerminalImmutableError
@@ -568,13 +569,14 @@ func TestStore_NotFoundIsNotSilent(t *testing.T) {
 	}
 }
 
-// TestStore_MigrateDownRoundTrip proves the versioned down migration fully
-// reverses 0001 (every durable object gone, migrate version back to nil) and
-// that re-applying up restores a clean, current, usable schema — the schema
-// reproducibility guarantee Phase 4 documents.
+// TestStore_MigrateDownRoundTrip proves the versioned down migrations fully
+// reverse 0001 and 0002 (every durable object gone, migrate version back to
+// nil) and that re-applying up restores a clean, current, usable schema — the
+// schema reproducibility guarantee Phase 4 documents, extended over the
+// Phase-5 additions.
 func TestStore_MigrateDownRoundTrip(t *testing.T) {
-	// TestMain migrated fresh, so the schema is at version 1 here.
-	if err := testStore.MigrateDown(ctxc(), 1); err != nil {
+	// TestMain migrated fresh, so the schema is at version 2 here.
+	if err := testStore.MigrateDown(ctxc(), 2); err != nil {
 		t.Fatalf("migrate down: %v", err)
 	}
 	v, dirty, err := testStore.SchemaVersion(ctxc())
@@ -588,10 +590,11 @@ func TestStore_MigrateDownRoundTrip(t *testing.T) {
 		t.Fatalf("schema version after down = %d, want 0 (nil)", v)
 	}
 	if n := countTables(t, "workflow", "step", "attempt", "inbound_event",
-		"processed_events", "outbox", "api_idempotency", "dead_letter", "audit_event"); n != 0 {
+		"processed_events", "outbox", "api_idempotency", "dead_letter", "audit_event",
+		"workflow_definition", "relay_checkpoint", "operator_action"); n != 0 {
 		t.Fatalf("durable tables remaining after down = %d, want 0", n)
 	}
-	// Re-apply up: schema returns to version 1, not dirty.
+	// Re-apply up: schema returns to version 2, not dirty.
 	if err := testStore.Migrate(ctxc()); err != nil {
 		t.Fatalf("re-migrate up: %v", err)
 	}
@@ -599,8 +602,8 @@ func TestStore_MigrateDownRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("version after re-up: %v", err)
 	}
-	if dirty || v != 1 {
-		t.Fatalf("after re-up version=%d dirty=%v, want version=1 dirty=false", v, dirty)
+	if dirty || v != 2 {
+		t.Fatalf("after re-up version=%d dirty=%v, want version=2 dirty=false", v, dirty)
 	}
 	// Prove the re-created schema is genuinely live: a full create/start/apply
 	// still drives a workflow to COMPLETED.

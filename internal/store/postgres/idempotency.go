@@ -2,10 +2,15 @@ package postgres
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Canonicalisation strategy for the durable idempotency fingerprint (DATA §D,
@@ -80,4 +85,47 @@ func canonicalJSON(raw []byte) ([]byte, error) {
 		return nil, err
 	}
 	return bytes.TrimSpace(buf.Bytes()), nil
+}
+
+// ---- stored responses (DATA §D: a replayed create returns the FIRST durable
+// response, not a re-rendered one) ----------------------------------------
+
+// RecordStoredResponse persists the canonical HTTP outcome of an idempotent
+// request next to its key, so any later delivery of the same key — including
+// after a process crash between create-commit and response — replays exactly
+// what the first success produced (status, body, headers). The body column is
+// TEXT (migration 0002): JSONB would re-render it and break byte identity.
+func (s *Store) RecordStoredResponse(ctx context.Context, key string, status int, body, headers []byte) error {
+	_, err := s.pool.Exec(ctx,
+		`UPDATE api_idempotency
+		    SET response_status = $2, response_body = $3, response_headers = $4::jsonb
+		  WHERE key = $1`,
+		key, status, string(body), string(headers))
+	if err != nil {
+		return mapQueryErr(err, "record stored response")
+	}
+	return nil
+}
+
+// GetStoredResponse returns the durable response for a key, found=false while
+// the creator is still mid-flight (key reserved, no outcome yet — the caller
+// must not answer 200 from nothing; DATA §D: 409 IN_PROGRESS semantics).
+func (s *Store) GetStoredResponse(ctx context.Context, key string, notAfter time.Time) (status int, body, headers []byte, found bool, err error) {
+	var st *int
+	var b, h []byte
+	err = s.pool.QueryRow(ctx,
+		`SELECT response_status, response_body, response_headers
+		   FROM api_idempotency
+		  WHERE key = $1 AND expires_at > $2`,
+		key, notAfter.UTC()).Scan(&st, &b, &h)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil, nil, false, nil
+	}
+	if err != nil {
+		return 0, nil, nil, false, mapQueryErr(err, "read stored response")
+	}
+	if st == nil { // key reserved but the creator has no durable outcome yet
+		return 0, nil, nil, false, nil
+	}
+	return *st, b, h, true, nil
 }

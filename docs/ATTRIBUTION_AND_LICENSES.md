@@ -34,6 +34,15 @@ Provenance record for Fathom. Every license statement below was **verified by re
 | `github.com/testcontainers/testcontainers-go` (+ /modules/postgres) | v0.44.0 | MIT 🔬 | test-only |
 | transitives: `klauspost/compress` v1.20.3, `pierrec/lz4/v4` v4.1.33, `golang.org/x/*`, `google.golang.org/grpc` v1.83.2 | — | BSD-3 / Apache-2 🔬 | tracked in generated `licenses/` dump |
 
+**Phase-5 status of this table:** the modules above were the probe-resolved set.
+As of Phase 5 the **product module** (`go.mod`, verified) ships five direct
+deps — `google/uuid`, `jackc/pgx/v5`, `golang-migrate/migrate/v4` (Phase 4) plus
+`twmb/franz-go` **v1.22.2** (relay publisher) and `prometheus/client_golang`
+**v1.25.0** (`/metrics`). `client_golang`'s **NOTICE obligation now attaches to
+shipped binaries** (reproduction mechanism per §4; nothing is distributed yet —
+no remote, no published images — so the obligation is staged, not live).
+`kadm`, `chi`, `otel`, `testcontainers` remain tools/test-only, as listed.
+
 **Licensing allowlist (CI-enforced at M3.1):** MIT, BSD-2/3-Clause, Apache-2.0, ISC, MPL-2.0. Anything else (GPL/AGPL/unlicensed) fails the build — this is the cheap wall that keeps the portfolio claim safe.
 `confluent-kafka-go/v2` is *not* a dependency (ADR-005 decision); it remains in `tools/depprobe` history only as probe evidence, so its Apache-2.0/librdkafka obligations do not attach to shipped binaries.
 

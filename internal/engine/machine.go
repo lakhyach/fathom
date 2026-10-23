@@ -7,11 +7,36 @@ import "time"
 // Workflow plus the ordered set of durable Effects a transaction must write.
 // Time is always passed in (`now`) so behaviour is deterministic and testable.
 
-// StepSpec is the declared form of a step used at creation.
+// StepSpec is the declared form of a step used at creation. The timeout and
+// compensator-task fields are definition data (SM §1): the machine itself never
+// reasons about durations — the store stamps durable deadlines from them and
+// the scheduler enforces — but they ride the same pinned snapshot.
 type StepSpec struct {
-	Type        string
-	MaxAttempts int
-	Compensable bool
+	Type            string
+	MaxAttempts     int
+	Compensable     bool
+	CompensatorTask string        // empty => the step's own Type
+	ForwardTimeout  time.Duration // 0 => engine.DefaultResponseTimeout
+}
+
+// DefaultResponseTimeout is the SM §8 normative forward timeout (issue->result,
+// 60 s). Per-step overrides ride StepSpec.ForwardTimeout.
+const DefaultResponseTimeout = 60 * time.Second
+
+// Timeout returns the declared forward timeout or the normative default.
+func (sp StepSpec) Timeout() time.Duration {
+	if sp.ForwardTimeout > 0 {
+		return sp.ForwardTimeout
+	}
+	return DefaultResponseTimeout
+}
+
+// Compensator returns the declared compensator task name for the step.
+func (sp StepSpec) Compensator() string {
+	if sp.CompensatorTask != "" {
+		return sp.CompensatorTask
+	}
+	return sp.Type
 }
 
 // Create builds the W1 initial workflow: state QUEUED, version 1, every step
@@ -121,7 +146,7 @@ func applyForwardResult(out Workflow, st *Step, ev ResultEvent, now time.Time) (
 			// §10: forward edges are disabled while CANCELLING. The in-flight
 			// success is recorded, then the workflow winds down (compensate
 			// completed -> ABORTED, or FAILED if nothing completed). Never COMPLETED.
-			return beginTermination(out, st.Type, ev.Attempt, now), nil
+			return beginTermination(out, st.Type, ev.Attempt), nil
 		}
 		if next := out.nextPending(); next != nil {
 			// W3: succeed, more steps remain — issue next in same tx.
@@ -145,7 +170,7 @@ func applyForwardResult(out Workflow, st *Step, ev ResultEvent, now time.Time) (
 	out.bump()
 	if out.State == StateCancelling {
 		// Winding down: no new forward attempts while cancelling.
-		return beginTermination(out, st.Type, ev.Attempt, now), nil
+		return beginTermination(out, st.Type, ev.Attempt), nil
 	}
 	max := st.MaxAttempts
 	if max <= 0 {
@@ -162,12 +187,12 @@ func applyForwardResult(out Workflow, st *Step, ev ResultEvent, now time.Time) (
 		}, nil
 	}
 	// Permanent failure -> compensate completed steps (W7) or FAILED (W8).
-	return beginTermination(out, st.Type, ev.Attempt, now), nil
+	return beginTermination(out, st.Type, ev.Attempt), nil
 }
 
 // beginTermination implements the W7/W8 fork shared by permanent failure,
 // timeout exhaustion, and used from Retry when a budget finally runs out.
-func beginTermination(out Workflow, failedStepType string, attempt int, now time.Time) Result {
+func beginTermination(out Workflow, failedStepType string, attempt int) Result {
 	set := out.completedCompensable()
 	if len(set) == 0 {
 		// W8: nothing to compensate -> FAILED terminal.
@@ -260,6 +285,12 @@ func TimeoutStep(wf Workflow, stepType string, expectedVersion int64, now time.T
 	}
 	st.State = StepTimedOut
 	out.bump()
+	if out.State == StateCancelling {
+		// Winding down: no new forward attempts while cancelling. The table has
+		// no CANCELLING -> RETRY_WAITING edge, and a retry re-issued here would
+		// fight the cancel (same rule applyForwardResult enforces for failures).
+		return beginTermination(out, st.Type, st.ActiveAttempt), nil
+	}
 	max := st.MaxAttempts
 	if max <= 0 {
 		max = 1
@@ -269,7 +300,7 @@ func TimeoutStep(wf Workflow, stepType string, expectedVersion int64, now time.T
 		return Result{Workflow: out, NextAttemptAt: now.Add(backoff(st.ActiveAttempt)),
 			Effects: []Effect{audit("RETRY_SCHEDULED_TIMEOUT", st.Type, st.ActiveAttempt)}}, nil
 	}
-	term := beginTermination(out, st.Type, st.ActiveAttempt, now)
+	term := beginTermination(out, st.Type, st.ActiveAttempt)
 	return term, nil
 }
 
@@ -342,12 +373,15 @@ func (w *Workflow) nextCompensating() *Step {
 	return chosen
 }
 
-// stepAwaitingRetry returns the FAILED forward step that is waiting for its
-// next attempt (state FAILED, attempts budget not exhausted conceptually).
+// stepAwaitingRetry returns the forward step that is waiting for its next
+// attempt. W5 is entered by BOTH a retryable failure (FAILED) and a response
+// timeout (TIMED_OUT, SM §8: "reaper -> W5/W7"), so both states await W6 —
+// matching only FAILED would strand every timed-out RETRY_WAITING workflow
+// (latent Phase-4 gap, regression-tested in recovery_test.go).
 func (w *Workflow) stepAwaitingRetry() *Step {
 	for i := range w.Steps {
-		if w.Steps[i].State == StepFailed {
-			return &w.Steps[i]
+		if s := &w.Steps[i]; s.State == StepFailed || s.State == StepTimedOut {
+			return s
 		}
 	}
 	return nil
@@ -404,3 +438,9 @@ func backoff(attempt int) time.Duration {
 	}
 	return d
 }
+
+// Backoff exposes the normative base retry schedule (SM §8: 2s x 2^(n-1),
+// capped 60s) so the reaper — the specified applier of full jitter at W6 —
+// jitters against the same numbers the machine used to schedule the due time,
+// without any caller re-deriving the schedule privately.
+func Backoff(attempt int) time.Duration { return backoff(attempt) }
