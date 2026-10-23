@@ -1,0 +1,62 @@
+# Primary CI — the reproducible foundation gate.
+#
+# NOTE (Phase 3 §5): this repository has NO git remote yet, so these workflows
+# are authored and syntax-validated but have NEVER executed. They become live
+# once a GitHub repo is created and pushed to (a later, user-authorized step).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Least privilege: the build needs no write scopes.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: format / vet / lint / test / race / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # Toolchain version comes from go.mod (go 1.26.5), so CI and dev agree.
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install the documented task runner (pinned)
+        run: go install github.com/go-task/task/v3/cmd/task@v3.54.0
+
+      - name: Formatting check
+        run: task fmt:check
+
+      - name: go vet (both modules)
+        run: task vet
+
+      - name: staticcheck (pinned, both modules)
+        run: task lint
+
+      - name: Unit tests (no broker/DB required)
+        run: task test
+
+      # Linux runner has a C toolchain, so the race detector actually runs here
+      # (it is BLOCKED on the Windows dev host, which has no gcc).
+      - name: Race-enabled tests
+        run: task test:race
+
+      - name: CGO-disabled build (portability contract, ADR-004/005)
+        run: task build
+
+      - name: Cross-compile linux/amd64 + linux/arm64
+        run: task build:linux
+
+      - name: Dependency integrity + tidy check
+        run: task deps:verify

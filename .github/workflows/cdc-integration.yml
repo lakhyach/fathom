@@ -1,0 +1,39 @@
+# CDC integration smoke — proves the pinned Kafka/Debezium image pair works with
+# the franz-go client and the Outbox EventRouter connector on a real broker.
+#
+# NOTE (Phase 3 §5): no git remote exists yet, so this workflow has NEVER run;
+# it is validated for syntax locally. The equivalent steps WERE executed on the
+# Windows dev host during Phase 3 (see docs/PHASE_3_VALIDATION_REPORT.md).
+name: CDC Integration Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Allow a manual run once a remote exists.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cdc-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kafka-debezium:
+    name: apache/kafka 4.3.1 + debezium/connect 3.7.0.Final
+    runs-on: ubuntu-latest # GitHub runners ship Docker + Compose v2
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/go.mod
+          cache: true
+
+      # The same script developers run locally (task cdc:smoke) — single source
+      # of truth for the smoke procedure, so CI can't drift from the docs.
+      - name: Run CDC smoke (compose up, franz-go round-trip, connector RUNNING, event routed, teardown)
+        run: bash ./scripts/cdc-smoke.sh

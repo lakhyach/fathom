@@ -1,0 +1,81 @@
+# CDC compatibility smoke stack — NOT the product deployment.
+#
+# Purpose (Phase 3 §4): prove the pinned Kafka/Debezium image pair actually
+# starts, that a Postgres-source connector using the Outbox EventRouter SMT
+# registers and reaches RUNNING, and that a row written to the outbox table is
+# routed onto a Kafka topic — i.e. the pure-Go relay's CDC-mode assumptions hold.
+#
+# Everything is bound to loopback only and uses obviously-fake credentials.
+# Images pinned by explicit tag (see ADR-007 for digests recorded in the smoke log).
+#
+#   docker compose -f deploy/docker-compose.smoke.yaml up -d --wait
+name: fathom-cdc-smoke
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    # No published host port: reachable only on the compose network. The
+    # application connects as a service; CDC needs no host exposure.
+    environment:
+      POSTGRES_USER: fathom
+      POSTGRES_PASSWORD: fathom-smoke-not-a-secret
+      POSTGRES_DB: fathom
+      # Logical decoding is required for Debezium's pgoutput plugin.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=4", "-c", "max_wal_senders=4"]
+    volumes:
+      - ./postgres-init/smoke.sql:/docker-entrypoint-initdb.d/00-smoke.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fathom -d fathom"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:4.3.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      # INTERNAL is used by connect (in-network); EXTERNAL is loopback-published
+      # for the host-run kafkasmoke tool. Bare PLAINTEXT, no scheme prefix in
+      # client config (Phase 1 DS-10).
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    # Single-ISR smoke topics need auto-create + rf=1 above.
+    ports:
+      - "127.0.0.1:29092:29092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  connect:
+    image: quay.io/debezium/connect:3.7.0.Final
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: fathom-smoke-connect
+      CONFIG_STORAGE_TOPIC: fathom.connect.configs
+      OFFSET_STORAGE_TOPIC: fathom.connect.offsets
+      STATUS_STORAGE_TOPIC: fathom.connect.status
+      # Single-broker cluster: one replica for the internal topics.
+      KAFKA_CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      KAFKA_CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      KAFKA_CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+    ports:
+      - "127.0.0.1:8083:8083"

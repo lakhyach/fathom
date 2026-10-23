@@ -15,8 +15,9 @@ build/
 *.dll
 *.so
 *.test
-# tools/depprobe compiled probe (Windows binary name)
-tools/depprobe/depprobe
+# Go build outputs for the single-main tool packages (extension-less on unix)
+tools/kafkasmoke/kafkasmoke
+tools/portprobe/portprobe
 
 # Go
 vendor/

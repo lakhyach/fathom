@@ -1,0 +1,102 @@
+# Taskfile — the cross-platform developer command surface for Fathom.
+#
+# Runner: go-task (v3). It works identically on Windows (Git-for-windows `sh`)
+# and Linux, so no Linux-only shell script is the sole way to build/test (§5).
+# Install once:  go install github.com/go-task/task/v3/cmd/task@v3.54.0
+# Then from repo root:  task <name>       (task --list to enumerate)
+#
+# Every target below mirrors a raw `go`/`gofmt` command documented in
+# docs/DEVELOPMENT.md, so you can always run them without Task.
+version: '3'
+
+# CGO is disabled by default: the whole product stack is pure-Go (ADR-004/005),
+# which is what makes Windows dev and reproducible Linux builds possible without
+# a native toolchain. The race target re-enables CGO explicitly (it requires cgo).
+env:
+  CGO_ENABLED: '0'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds: [task --list]
+    silent: true
+
+  fmt:
+    desc: Format all Go sources (in place)
+    cmds:
+      - gofmt -w -s .
+
+  fmt:check:
+    desc: Fail if any Go source is not gofmt -s clean
+    cmds:
+      - |
+        unformatted="$(gofmt -l -s .)"
+        if [ -n "$unformatted" ]; then
+          echo "gofmt -s needed on:"; echo "$unformatted"; exit 1
+        fi
+        echo "gofmt -s clean"
+
+  vet:
+    desc: go vet the product module and the tools module
+    cmds:
+      - go vet ./...
+      - cd tools && go vet ./...
+
+  lint:
+    desc: staticcheck (pinned v0.8.2, run via 'go run' so no install is needed)
+    cmds:
+      - go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
+      - cd tools && go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
+
+  test:
+    desc: Unit tests (no broker/DB required — the foundation is self-contained)
+    cmds:
+      - go test ./...
+
+  test:race:
+    desc: Race-enabled tests (requires cgo; intended for Linux CI)
+    env:
+      CGO_ENABLED: '1'
+    cmds:
+      - go test -race ./...
+
+  build:
+    desc: CGO-disabled build of both modules for the host
+    cmds:
+      - go build ./...
+      - cd tools && go build ./...
+
+  build:linux:
+    desc: Cross-compile both modules for linux/amd64 and linux/arm64
+    cmds:
+      - GOOS=linux GOARCH=amd64 go build ./...
+      - GOOS=linux GOARCH=arm64 go build ./...
+      - cd tools && GOOS=linux GOARCH=amd64 go build ./...
+      - cd tools && GOOS=linux GOARCH=arm64 go build ./...
+
+  deps:verify:
+    desc: Verify go.sum integrity and that modules are tidily sorted (no drift)
+    cmds:
+      - go mod verify
+      - go mod tidy -diff
+      - cd tools && go mod verify
+      - cd tools && go mod tidy -diff
+
+  hygiene:
+    desc: Repository guards (no committed secrets / key material) via go test
+    cmds:
+      - go test ./internal/hygiene/...
+
+  cdc:smoke:
+    desc: Kafka + Debezium image-pair smoke test (needs Docker; see script)
+    cmds:
+      - ./scripts/cdc-smoke.sh
+
+  ci:
+    desc: The exact gate set run in GitHub Actions (format, vet, lint, test, build)
+    deps: [fmt:check, vet, lint]
+    cmds:
+      - go test ./...
+      - go build ./...
+      - cd tools && go build ./...
+      - go mod tidy -diff
