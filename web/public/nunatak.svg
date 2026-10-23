@@ -6,13 +6,17 @@
     </linearGradient>
   </defs>
   <rect x="0" y="0" width="32" height="32" rx="8" fill="#0a0f1e" />
-  <g fill="none" stroke="url(#nk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M6 24 16 6 26 24" />
-    <path d="M11 24 16 15 21 24" opacity="0.4" />
+  <!-- orchestration edges: a summit fed by two base nodes through a core -->
+  <g fill="none" stroke="url(#nk)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 8 24 16 16 24 8 16 16 8Z" />
+    <path d="M16 8v5M16 19v5M8 16h5M19 16h5" opacity="0.5" stroke-width="1.8" />
   </g>
+  <!-- nodes: summit + base vertices + orchestrating core -->
   <g fill="url(#nk)">
-    <circle cx="16" cy="6" r="2.4" />
-    <circle cx="6" cy="24" r="2.1" />
-    <circle cx="26" cy="24" r="2.1" />
+    <circle cx="16" cy="8" r="2.7" />
+    <circle cx="8" cy="16" r="2.2" />
+    <circle cx="24" cy="16" r="2.2" />
+    <circle cx="16" cy="24" r="2.2" />
   </g>
+  <circle cx="16" cy="16" r="2" fill="#0a0f1e" stroke="url(#nk)" stroke-width="1.8" />
 </svg>

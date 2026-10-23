@@ -70,6 +70,33 @@ vector shapes owned by the project.
   nothing here needs a reduced-motion gate; the global
   `prefers-reduced-motion` rule in `tokens.css` already neutralises all durations.
 
+## 2a. Phase 6.2 revision — same two vectors, higher fidelity
+
+Phase 6.2 (reference-locked visual-fidelity correction) **revised the two existing
+bespoke vectors in place**. No asset was added, downloaded, hotlinked, or
+re-licensed: both remain original, project-owned SVG authored in this repository,
+so the licence posture in §2 is unchanged and no new attribution chain is
+introduced. Concretely:
+
+- **`web/public/alpine.svg`** was rebuilt from the earlier three-ridge schematic
+  into a **cinematic four-plane layered range** (`far → back → mid → near`), each
+  with its own depth gradient, a blue-violet `rim` light stroked down the lit
+  faces, snow caps, a `fog` band behind the mid range, a blurred valley-fog pool
+  and a soft gaussian `filter`, an aurora band + hazeglow behind the farthest
+  peaks, and a `basefade` that dissolves the scene into the rail. It still
+  `viewBox="0 0 240 520"`, still loads same-origin as the nav-rail
+  `background-image`, and is still purely decorative (contrast for the nav labels
+  comes from the scrim in `shell.css`, not the artwork).
+- **`web/public/nunatak.svg`** was refined from the plain peak mark into an
+  **orchestration glyph**: a diamond whose four summit/base/left/right vertices
+  are nodes, linked by edges to a distinct hollow central **core** node — a clear
+  connection/orchestration metaphor — on the same rounded midnight tile with the
+  blue→violet accent ramp. It stays `viewBox="0 0 32 32"` and renders crisply at
+  16/32/48 px for the favicon.
+
+Everything else in this file (fonts §1, iconography §3, libraries §4, naming §5)
+is untouched by Phase 6.2.
+
 ## 3. Iconography
 - **Origin:** original inline SVG components in `web/src/icons/index.tsx` —
   hand-drawn on a 24 px grid, 1.5 px stroke, round caps; the brand `NunatakMark`

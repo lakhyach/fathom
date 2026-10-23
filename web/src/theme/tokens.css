@@ -11,11 +11,11 @@
   /* ---- surfaces (obsidian -> midnight navy, cool hue ~265) ---- */
   --fx-void: oklch(0.13 0.018 265);        /* app background        */
   --fx-abyss: oklch(0.105 0.016 265);      /* sidebar / chrome      */
-  --fx-panel: oklch(0.165 0.02 265);       /* card surface          */
-  --fx-panel-raised: oklch(0.195 0.024 265); /* hover / raised card  */
+  --fx-panel: oklch(0.172 0.021 265);       /* card surface          */
+  --fx-panel-raised: oklch(0.205 0.026 265); /* hover / raised card  */
   --fx-inset: oklch(0.125 0.018 265);      /* wells, code blocks    */
-  --fx-line: oklch(0.28 0.03 265 / 0.55);  /* hairline border       */
-  --fx-line-strong: oklch(0.36 0.04 265 / 0.7);
+  --fx-line: oklch(0.30 0.032 265 / 0.6);  /* hairline border       */
+  --fx-line-strong: oklch(0.38 0.045 265 / 0.72);
   --fx-line-faint: oklch(0.24 0.025 265 / 0.45);
 
   /* ---- ink (text) ---- */

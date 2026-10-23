@@ -5,7 +5,7 @@
 
 .fx-graph {
   width: 100%;
-  height: 440px;
+  height: 216px;
   border: var(--fx-hair) solid var(--fx-line);
   border-radius: var(--fx-r-md);
   background:
@@ -38,15 +38,19 @@
   fill: var(--fx-ink-muted);
 }
 
-/* the step node */
+/* the step node — compact card: a leading status glyph + name on top, the
+   status badge and attempt count below. The whole border is tinted by the
+   step's real tone (badge text co-renders, so colour never travels alone). */
 .fx-node {
+  position: relative;
   border-radius: var(--fx-r-md);
   background: var(--fx-panel-raised);
-  border: 1px solid var(--fx-line);
+  border: 1px solid var(--fx-st-tone, var(--fx-line));
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  justify-content: space-between;
+  gap: 8px;
   color: var(--fx-ink);
   box-shadow: var(--fx-shadow-sm);
   transition: border-color var(--fx-dur-fast) var(--fx-ease),
@@ -60,17 +64,6 @@
   border-color: var(--fx-blue);
   box-shadow: var(--fx-glow-blue), var(--fx-shadow-md);
 }
-.fx-node::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--fx-st-tone, var(--fx-st-pending));
-}
-.fx-node { position: relative; }
 .fx-node--completed { --fx-st-tone: var(--fx-st-completed); }
 .fx-node--running { --fx-st-tone: var(--fx-st-running); }
 .fx-node--compensating { --fx-st-tone: var(--fx-st-compensating); }
@@ -82,43 +75,39 @@
 .fx-node__top {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
 }
-.fx-node__pos {
+.fx-node__icon {
   flex: none;
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--fx-st-tone, var(--fx-st-pending));
   background: var(--fx-inset);
-  border: var(--fx-hair) solid var(--fx-line);
-  font-size: var(--fx-fs-micro);
-  color: var(--fx-ink-faint);
+  border: var(--fx-hair) solid var(--fx-st-tone, var(--fx-line));
 }
 .fx-node__type {
-  font-size: var(--fx-fs-small);
-  font-weight: 600;
+  font-size: var(--fx-fs-body);
+  font-weight: 640;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+  color: var(--fx-ink);
 }
 .fx-node__comp {
   flex: none;
   color: var(--fx-violet-bright);
   display: inline-flex;
 }
-.fx-node__state {
-  display: flex;
-}
 .fx-node__foot {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: auto;
   font-size: var(--fx-fs-micro);
   color: var(--fx-ink-faint);
 }
@@ -127,11 +116,12 @@
   border-radius: var(--fx-r-pill);
   background: var(--fx-inset);
   border: var(--fx-hair) solid var(--fx-line-faint);
+  color: var(--fx-ink-muted);
 }
 .fx-node__lease {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  color: var(--fx-st-running);
 }
 .fx-node__lease--live {
   color: var(--fx-st-running);
@@ -207,5 +197,5 @@
 }
 
 @media (max-width: 780px) {
-  .fx-graph { height: 340px; }
+  .fx-graph { height: 190px; }
 }

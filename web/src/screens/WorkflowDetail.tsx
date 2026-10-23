@@ -7,7 +7,7 @@
    compensator attributes) — no inferred branching DAG, no fabricated trends, no
    CPU/memory telemetry the engine does not expose, no pause/cancel the machine
    does not admit. Unsupported views say so plainly. */
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import {
   ReactFlow,
@@ -17,7 +17,7 @@ import {
   type Node,
 } from "@xyflow/react";
 
-import { useAttempts, useEvents, useInbound, useMetrics, useWorkflow, useWorkflowAction } from "../api/hooks";
+import { useAttempts, useDlq, useEvents, useInbound, useMetrics, useWorkflow, useWorkflowAction } from "../api/hooks";
 import { workflowCensus } from "../api/prom";
 import { StepNode } from "../graph/StepNode";
 import { layoutGraph, type StepNodeData } from "../graph/layout";
@@ -43,6 +43,9 @@ import {
   IconAlert,
   IconCancel,
   IconCheck,
+  IconChevronRight,
+  IconClock,
+  IconDeadLetter,
   IconExecution,
   IconInfo,
   IconJson,
@@ -50,6 +53,7 @@ import {
   IconLogs,
   IconRefresh,
   IconRoute,
+  IconUndo,
 } from "../icons";
 import type { Attempt, StepView, Workflow } from "../api/types";
 import type { ReactNode } from "react";
@@ -58,6 +62,27 @@ import "./screens.css";
 const TERMINAL = new Set(["COMPLETED", "FAILED", "ABORTED"]);
 const DONE = new Set(["SUCCEEDED", "COMPENSATED"]);
 const nodeTypes = { step: StepNode };
+
+/* leading status sigil for the exec header — a tone-tinted circular chip that
+   mirrors the node glyphs, so the header and the graph read as one system. */
+function sigilGlyph(tone: string) {
+  switch (tone) {
+    case "completed":
+      return <IconCheck size={16} />;
+    case "running":
+      return <IconExecution size={16} />;
+    case "compensating":
+      return <IconUndo size={16} />;
+    case "negative":
+      return <IconCancel size={16} />;
+    case "manual":
+      return <IconInfo size={16} />;
+    case "warn":
+      return <IconAlert size={16} />;
+    default:
+      return <IconClock size={16} />;
+  }
+}
 
 type Tab = "flow" | "steps" | "events" | "attempts" | "io" | "audit" | "traces";
 
@@ -80,6 +105,19 @@ export function WorkflowDetail() {
     setTab("flow");
   };
   const chosenStep = steps.find((s) => s.step_type === selected) ?? null;
+
+  // Open the Step-details lower panel on real content instead of the empty state:
+  // auto-select the current step once per workflow id. If the operator then
+  // clears the selection it stays cleared — the guard is keyed on the id, not on
+  // every poll, so background refetches never fight an intentional deselection.
+  const autoKey = useRef<string>("");
+  useEffect(() => {
+    const key = id ?? "";
+    if (autoKey.current === key || steps.length === 0) return;
+    autoKey.current = key;
+    const cur = steps.find((s) => !DONE.has(s.state)) ?? steps[steps.length - 1];
+    setSelected(cur ? cur.step_type : null);
+  }, [id, steps]);
 
   return (
     <div className="fx-screen fx-inspector">
@@ -134,6 +172,8 @@ export function WorkflowDetail() {
               <ActionPanel id={wf.data.id} state={wf.data.state} version={wf.data.version} />
             </aside>
           </div>
+
+          <RelatedDeadLetterBar id={id} />
         </>
       )}
     </div>
@@ -166,11 +206,9 @@ function KpiStrip() {
       ) : (
         cards.map((c) => (
           <div key={c.k} className={`fx-kpi__card fx-kpi__card--${c.tone}`}>
+            <span className="fx-kpi__k">{c.k}</span>
+            <span className="fx-kpi__v num">{c.v}</span>
             <span className="fx-kpi__icon" aria-hidden="true">{c.icon}</span>
-            <span className="fx-kpi__body">
-              <span className="kicker">{c.k}</span>
-              <span className="fx-kpi__v num">{c.v}</span>
-            </span>
           </div>
         ))
       )}
@@ -186,6 +224,7 @@ function ExecHeader({ wf, updatedAt }: { wf: Workflow; updatedAt: number }) {
   // within a render and still advances one poll at a time (dataUpdatedAt).
   const nowRef = wf.finished_at ? Date.parse(wf.finished_at) : updatedAt;
   const elapsed = wf.started_at && nowRef ? nowRef - Date.parse(wf.started_at) : null;
+  const meta = workflowStatus(wf.state);
   return (
     <div className="fx-exec-head">
       <div className="fx-exec-head__main">
@@ -194,11 +233,16 @@ function ExecHeader({ wf, updatedAt }: { wf: Workflow; updatedAt: number }) {
           <span aria-hidden="true"> / </span>
           <span className="mono" title={wf.id}>{truncate(wf.id, 14)}…</span>
         </span>
-        <h1 className="fx-exec-title">
-          {wf.def_name}
-          <span className="fx-dim mono">v{wf.def_version}</span>
+        <div className="fx-exec-titlerow">
+          <span className={`fx-exec-sigil fx-exec-sigil--${meta.tone}`} aria-hidden="true">
+            {sigilGlyph(meta.tone)}
+          </span>
+          <h1 className="fx-exec-title">
+            {wf.def_name}
+            <span className="fx-dim mono">v{wf.def_version}</span>
+          </h1>
           <StatusBadge state={wf.state} />
-        </h1>
+        </div>
         <div className="fx-exec-meta">
           <span><span className="fx-dim">Started</span> <TimeText iso={wf.started_at} /></span>
           {elapsed !== null && <span><span className="fx-dim">Elapsed</span> {humanDuration(elapsed)}{running ? " · live" : ""}</span>}
@@ -265,6 +309,7 @@ function GraphPanel({ nodes, edges, steps, wf, updatedAt, chosen, onPick }: {
           nodeTypes={nodeTypes}
           onNodeClick={(_, n) => onPick(n.id)}
           fitView
+          fitViewOptions={{ padding: 0.22, maxZoom: 1.35 }}
           minZoom={0.4}
           nodesDraggable={false}
           nodesConnectable={false}
@@ -418,14 +463,14 @@ function ExecMetricsPanel({ wf, updatedAt }: { wf: Workflow; updatedAt: number }
   ];
   return (
     <Panel title={<h2>Execution metrics</h2>} kicker="derived from real step data">
-      <ul className="fx-exec-metrics">
+      <div className="fx-exec-tiles">
         {metrics.map((m) => (
-          <li key={m.k} className="fx-exec-metrics__row">
-            <span className="fx-exec-metrics__k">{m.k}</span>
-            <span className="fx-exec-metrics__v num">{m.v}</span>
-          </li>
+          <div key={m.k} className="fx-exec-tile">
+            <span className="fx-exec-tile__v num">{m.v}</span>
+            <span className="fx-exec-tile__k">{m.k}</span>
+          </div>
         ))}
-      </ul>
+      </div>
       <p className="fx-note">
         Host CPU, memory and connection telemetry are <strong>not exposed</strong> by the engine, so they are
         intentionally absent here rather than simulated.
@@ -742,5 +787,29 @@ function ActionPanel({ id, state, version }: { id: string; state: string; versio
       )}
       <Link to={`/events?workflow=${id}`} className="btn btn-ghost btn-sm fx-actionlink"><IconLogs size={13} /> Open full event ledger</Link>
     </Panel>
+  );
+}
+
+/* ---------------------- related dead letter / manual --------------------- */
+
+/* The reference's bottom summary strip. The engine exposes a real dead-letter
+   queue keyed by workflow, so the count and the newest reason are genuine — we
+   filter defensively by workflow_id in case the server ignores the query, and
+   never invent an entry. Zero is shown honestly as zero. */
+function RelatedDeadLetterBar({ id }: { id: string | undefined }) {
+  const dlq = useDlq({ workflow_id: id, open: true, limit: 20 });
+  const items = (dlq.data?.items ?? []).filter((d) => d.workflow_id === id);
+  const n = items.length;
+  const newest = items[0];
+  return (
+    <Link to="/dlq" className={`fx-dlqbar ${n > 0 ? "fx-dlqbar--on" : ""}`}>
+      <span className="fx-dlqbar__icon" aria-hidden="true"><IconDeadLetter size={16} /></span>
+      <span className="fx-dlqbar__label">Related dead letter / manual interventions</span>
+      <span className="fx-dlqbar__count num" aria-label={`${n} open`}>{dlq.isLoading ? "…" : n}</span>
+      {n > 0 && newest && (
+        <span className="fx-dlqbar__hint mono" title={newest.reason_code}>{newest.class} · {newest.reason_code}</span>
+      )}
+      <span className="fx-dlqbar__cta">Open centre <IconChevronRight size={14} /></span>
+    </Link>
   );
 }

@@ -6,14 +6,14 @@
    are shown as attributes of their forward step, never as an inferred extra
    vertex (brief §5: "Do not infer an execution path that the backend does not
    provide"). Pure + deterministic so it is golden-testable. */
-import type { Edge, Node } from "@xyflow/react";
+import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 import { stepStatus, toneVar } from "../theme/status";
 import type { StepView } from "../api/types";
 
-export const NODE_W = 208;
-export const NODE_H = 92;
-const GAP_X = 72;
+export const NODE_W = 188;
+export const NODE_H = 74;
+const GAP_X = 74;
 const ORIGIN_X = 24;
 const ORIGIN_Y = 40;
 
@@ -43,17 +43,23 @@ export function layoutGraph(steps: StepView[]): { nodes: Node<StepNodeData>[]; e
   for (let i = 0; i < ordered.length - 1; i++) {
     const target = ordered[i + 1];
     const begun = target.state !== "PENDING";
+    const stroke = begun ? toneVar(stepStatus(target.state).tone) : "var(--fx-line-strong)";
     edges.push({
       id: `${ordered[i].step_type}->${target.step_type}`,
       source: ordered[i].step_type,
       target: target.step_type,
+      // a gentle bezier reads as the reference's elegant connector; the chain
+      // stays strictly left→right because that is the only ordering the engine
+      // actually provides (no inferred branches).
+      type: "default",
       // an edge is "live" only once the downstream step has actually begun —
       // never painted as traversed for work the backend has not run.
       animated: begun,
-      // stroke follows the downstream step's real status tone (same token the
-      // node badge uses), so the connector and the node never disagree. Unrun
-      // work stays a neutral hairline rather than a fake "success" path.
-      style: { stroke: begun ? toneVar(stepStatus(target.state).tone) : "var(--fx-line-strong)", strokeWidth: begun ? 1.75 : 1.5 },
+      // stroke + arrowhead follow the downstream step's real status tone (the
+      // same token the node badge uses), so connector and node never disagree.
+      // Unrun work stays a neutral hairline rather than a fake "success" path.
+      style: { stroke, strokeWidth: begun ? 2 : 1.5 },
+      markerEnd: { type: MarkerType.ArrowClosed, width: 15, height: 15, color: stroke },
     });
   }
   return { nodes, edges };
