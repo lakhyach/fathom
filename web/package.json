@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false"
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
