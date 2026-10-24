@@ -47,7 +47,11 @@ const STEP: Record<string, StatusMeta> = {
   COMPENSATION_PENDING: { label: "Compensation pending", tone: "compensating" },
   COMPENSATING: { label: "Compensating", tone: "compensating" },
   COMPENSATED: { label: "Compensated", tone: "completed" },
-  COMPENSATION_FAILED: { label: "Compensation failed", tone: "manual", icon: "alert" },
+  COMPENSATION_FAILED: {
+    label: "Compensation failed",
+    tone: "manual",
+    icon: "alert",
+  },
 };
 
 /** Attempt states reuse the step vocabulary (SUCCEEDED/FAILED/...). */
@@ -76,13 +80,15 @@ export function stepStatus(state: string): StatusMeta {
 export function attemptStatus(state: string): StatusMeta {
   return ATTEMPT[state] ?? { ...FALLBACK, label: state };
 }
-export function classificationStatus(cls: string | null | undefined): StatusMeta {
+export function classificationStatus(
+  cls: string | null | undefined,
+): StatusMeta {
   if (!cls) return FALLBACK;
   return CLASSIFICATION[cls] ?? { ...FALLBACK, label: cls };
 }
 
 /** CSS custom property for a tone — components use this, never a literal.
- *  Phase 7: Glacier Glass tokens (--st-*); the retired fx-* layer is gone. */
+ *  Phase 8: the --st-* ramp carries both the graphic and text role. */
 export function toneVar(tone: StatusTone): string {
   return `var(--st-${tone})`;
 }

@@ -12,8 +12,15 @@ import {
 describe("status mapping (single source of truth)", () => {
   it("covers the nine engine workflow states in order", () => {
     expect(WORKFLOW_STATES).toEqual([
-      "QUEUED", "RUNNING", "RETRY_WAITING", "COMPENSATING", "CANCELLING",
-      "COMPLETED", "FAILED", "ABORTED", "FAILED_MANUAL",
+      "QUEUED",
+      "RUNNING",
+      "RETRY_WAITING",
+      "COMPENSATING",
+      "CANCELLING",
+      "COMPLETED",
+      "FAILED",
+      "ABORTED",
+      "FAILED_MANUAL",
     ]);
   });
 
@@ -24,7 +31,9 @@ describe("status mapping (single source of truth)", () => {
   });
 
   it("renders the real classifications, not invented ones", () => {
-    expect(classificationStatus("TERMINAL_IGNORED").label).toBe("Terminal ignored");
+    expect(classificationStatus("TERMINAL_IGNORED").label).toBe(
+      "Terminal ignored",
+    );
     expect(classificationStatus("UNPARSEABLE").tone).toBe("negative");
     expect(attemptStatus("SUCCEEDED").tone).toBe("completed");
   });

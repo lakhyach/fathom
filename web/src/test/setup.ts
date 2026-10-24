@@ -41,7 +41,9 @@ if (typeof window !== "undefined") {
   if (!crypto.randomUUID) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (crypto as any).randomUUID = () =>
-      "00000000-0000-4000-8000-000000000000".replace(/0/g, () => Math.floor(Math.random() * 16).toString(16));
+      "00000000-0000-4000-8000-000000000000".replace(/0/g, () =>
+        Math.floor(Math.random() * 16).toString(16),
+      );
   }
 
   if (!Element.prototype.scrollIntoView) {
