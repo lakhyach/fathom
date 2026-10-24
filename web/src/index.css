@@ -106,13 +106,31 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.93 0.01 230 / 12%) transparent;
   }
   html {
     color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
     text-rendering: optimizeLegibility;
+    /* deliberate cockpit density carried over from the retired 13px scale;
+       explicit text-* utilities still win over this. */
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  #root {
+    min-height: 100dvh;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   ::selection {
     background: oklch(0.815 0.125 178 / 30%);
