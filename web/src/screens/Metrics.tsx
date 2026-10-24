@@ -1,20 +1,21 @@
-/* Metrics & system health. This renders the eleven fathom_* series the
-   collector actually registers — nothing more. Prometheus counters are shown
-   as durable totals; there is no time-series history endpoint (gap G4), so no
-   sparklines or rate(Δ) curves are drawn. The raw exposition snapshot is
-   listed exhaustively so an operator can always see the ground truth. */
-import { useMemo, type CSSProperties } from "react";
+/* Metrics & Health. Every figure is a series the /metrics collector actually
+   registers — nothing more. Prometheus counters are shown as durable totals;
+   there is no time-series history endpoint (gap G4), so no sparklines or
+   rate(Δ) curves are drawn. The raw exposition snapshot is listed exhaustively
+   so an operator can always see the ground truth.
+
+   Phase 7 rebuild: same Recharts chart primitives as Overview, shadcn Table for
+   the raw-series ledger, kit PageHeader/KpiCard/Panel for chrome. */
+import { useMemo } from "react";
 import { Link } from "react-router";
+import { AlertOctagon, Check, ListChecks, MailWarning, Play, Plug, TriangleAlert } from "lucide-react";
 
 import { useHealthz, useMetrics, useReadyz } from "../api/hooks";
 import { byLabel, gaugeValue, workflowCensus } from "../api/prom";
-import { EmptyState, ErrorState, KpiCard, LoadingRows, Panel, SnapshotAt, TimeText, humanDuration } from "../components/ui";
+import { EmptyState, ErrorState, KpiCard, LoadingRows, PageHeader, Panel, SnapshotAt, TimeText, humanDuration } from "../components/ui";
 import { BarList, Donut, GaugeRing, TransitionBars } from "../components/charts";
-import { IconAlert, IconCheck, IconDeadLetter, IconExecution, IconPlug, IconWorkflows } from "../icons";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Sample } from "../api/prom";
-import "./screens.css";
-
-const rise = (i: number) => ({ className: "fx-rise", style: { "--fx-rise-i": i } as CSSProperties });
 
 const ACTIVE = ["QUEUED", "RUNNING", "RETRY_WAITING", "COMPENSATING", "CANCELLING"];
 const NEGATIVE = ["FAILED", "ABORTED"];
@@ -74,119 +75,128 @@ export function Metrics() {
   const completed = byState.get("COMPLETED") ?? 0;
   const openDlq = dlqDepth.reduce((a, r) => a + r.value, 0);
 
+  const rawRows = map
+    ? Object.values(map)
+        .filter((fam) => fam.name.startsWith("fathom_"))
+        .flatMap((fam) => fam.samples.map((s) => ({ fam: fam.name, s })))
+    : [];
+
   return (
-    <div className="fx-screen">
-      <div className="fx-page-head">
-        <div>
-          <span className="kicker">Telemetry</span>
-          <h1>Metrics &amp; Health</h1>
-          <p className="fx-page-sub">
-            Live scrape of the control plane’s own Prometheus series. Totals are durable counters; gauge
-            ages are measured against their operational budget.
-          </p>
-        </div>
-        <div className="fx-page-head__side">
-          {metrics.dataUpdatedAt > 0 && <SnapshotAt updatedAt={metrics.dataUpdatedAt} />}
-          <span className={`fx-ready fx-ready--${readyz.data?.status ?? "unknown"}`}>
-            <IconPlug size={11} /> {healthz.data ? "liveness ok" : "no liveness"} · readyz: {readyz.data?.status ?? "…"}
-            {readyz.data?.reason ? ` (${readyz.data.reason})` : ""}
-          </span>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-[1400px]">
+      <PageHeader
+        kicker="Telemetry"
+        title="Metrics & Health"
+        sub={<>Live scrape of the control plane’s own Prometheus series. Totals are durable counters; gauge ages are measured against their operational budget.</>}
+        side={
+          <>
+            {metrics.dataUpdatedAt > 0 && <SnapshotAt updatedAt={metrics.dataUpdatedAt} />}
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
+              <Plug className="size-3.5" aria-hidden="true" />
+              {healthz.data ? "liveness ok" : "no liveness"} · readyz: {readyz.data?.status ?? "…"}
+              {readyz.data?.reason ? ` (${readyz.data.reason})` : ""}
+            </span>
+          </>
+        }
+      />
 
       {metrics.isLoading && <Panel><LoadingRows rows={4} /></Panel>}
       {metrics.isError && <Panel><ErrorState error={metrics.error} onRetry={() => metrics.refetch()} /></Panel>}
 
       {map && (
         <>
-          <div className="fx-kpi">
-            <KpiCard index={0} kicker="Total workflows" value={total} sub={total > 0 ? "durable census" : "no data yet"} icon={<IconWorkflows size={16} />} tone="neutral" />
-            <KpiCard index={1} kicker="Completed" value={completed} sub="terminal · immutable" icon={<IconCheck size={16} />} tone="completed" />
-            <KpiCard index={2} kicker="Active" value={active} sub="queued · running · compensating" icon={<IconExecution size={16} />} tone="running" />
-            <KpiCard index={3} kicker="Failed / aborted" value={failed} sub="terminal · negative" icon={<IconAlert size={16} />} tone="negative" />
+          <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <KpiCard index={0} kicker="Total workflows" value={total} sub={total > 0 ? "durable census" : "no data yet"} icon={<ListChecks className="size-4" />} tone="neutral" />
+            <KpiCard index={1} kicker="Completed" value={completed} sub="terminal · immutable" icon={<Check className="size-4" />} tone="completed" />
+            <KpiCard index={2} kicker="Active" value={active} sub="queued · running · compensating" icon={<Play className="size-4" />} tone="running" />
+            <KpiCard index={3} kicker="Failed / aborted" value={failed} sub="terminal · negative" icon={<AlertOctagon className="size-4" />} tone="negative" />
             <KpiCard
               index={4}
               kicker="Dead letters"
               value={openDlq}
-              sub={<Link to="/dlq">investigate →</Link>}
-              icon={<IconDeadLetter size={16} />}
+              sub={<Link to="/dlq" className="text-primary underline-offset-4 hover:underline">investigate →</Link>}
+              icon={<MailWarning className="size-4" />}
               tone="manual"
             />
           </div>
 
-          <div className="fx-grid-2">
-            <Panel {...rise(0)} title={<h2>Workflow census</h2>} kicker="fathom_workflows_total">
+          <div className="mb-5 grid gap-4 lg:grid-cols-2">
+            <Panel title={<h2>Workflow census</h2>} kicker="fathom_workflows_total">
               <Donut slices={slices} total={total} />
             </Panel>
-            <Panel {...rise(1)} title={<h2>Transitions</h2>} kicker="fathom_workflow_transitions_total · by edge">
+            <Panel title={<h2>Transitions</h2>} kicker="fathom_workflow_transitions_total · by edge">
               <TransitionBars rows={transitions} />
             </Panel>
           </div>
 
-          <div className="fx-grid-3">
-            <Panel {...rise(2)} title={<h2>Ingress</h2>} kicker="fathom_events_classified_total">
+          <div className="mb-5 grid gap-4 lg:grid-cols-3">
+            <Panel title={<h2>Ingress</h2>} kicker="fathom_events_classified_total">
               <BarList rows={classified} emptyText="No events classified yet." />
             </Panel>
-            <Panel {...rise(3)} title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
-              {dlqDepth.length === 0 ? <p className="fx-chart-empty">Dead-letter queue is empty.</p> : <BarList rows={dlqDepth} tone="violet" />}
+            <Panel title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
+              {dlqDepth.length === 0 ? <p className="text-xs text-muted-foreground">Dead-letter queue is empty.</p> : <BarList rows={dlqDepth} tone="violet" />}
             </Panel>
-            <Panel {...rise(4)} title={<h2>Relay publish lag</h2>} kicker="fathom_relay_publish_lag_seconds">
-              {relayLag.length === 0 ? <p className="fx-chart-empty">No relay registered with this process.</p> : <BarList rows={relayLag} tone="blue" />}
+            <Panel title={<h2>Relay publish lag</h2>} kicker="fathom_relay_publish_lag_seconds">
+              {relayLag.length === 0 ? <p className="text-xs text-muted-foreground">No relay registered with this process.</p> : <BarList rows={relayLag} tone="blue" />}
             </Panel>
           </div>
 
-          <Panel {...rise(5)} title={<h2>Ageing &amp; backlog</h2>} kicker="bounded gauges">
-            <div className="fx-pulse-row">
+          <Panel className="mb-5" title={<h2>Ageing &amp; backlog</h2>} kicker="bounded gauges">
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-6">
               <GaugeRing value={oldestOpen} max={3600} label="Oldest open workflow (1 h)" />
               <GaugeRing value={oldestDlq} max={86400} label="Oldest dead letter (24 h)" />
               <GaugeRing value={outboxAge} max={300} label="Oldest unpublished outbox (5 m)" />
-              <div className="fx-pulse-side">
-                <div className="fx-pulse-metric">
-                  <span className="kicker">Outbox backlog</span>
-                  <span className="fx-pulse-metric__v num">{outboxDepth ?? "—"}</span>
-                  <span className="fx-dim">rows awaiting relay</span>
+              <div className="flex min-w-48 flex-1 flex-col gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Outbox backlog</span>
+                  <span className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">{outboxDepth ?? "—"}</span>
+                  <span className="text-xs text-muted-foreground">rows awaiting relay</span>
                 </div>
-                <div className="fx-pulse-metric">
-                  <span className="kicker">Live step leases</span>
-                  <span className="fx-pulse-metric__v num">{leases ?? "—"}</span>
-                  <span className="fx-dim">held by workers</span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Live step leases</span>
+                  <span className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">{leases ?? "—"}</span>
+                  <span className="text-xs text-muted-foreground">held by workers</span>
                 </div>
-                <div className="fx-pulse-metric">
-                  <span className="kicker">Relay un-acked rows</span>
-                  <span className="fx-pulse-metric__v num">{relayUnacked.reduce((a, r) => a + r.value, 0) || "0"}</span>
-                  <span className="fx-dim">across relays</span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Relay un-acked rows</span>
+                  <span className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">{relayUnacked.reduce((a, r) => a + r.value, 0) || "0"}</span>
+                  <span className="text-xs text-muted-foreground">across relays</span>
                 </div>
-                <div className="fx-pulse-metric">
-                  <span className="kicker">Last metrics scrape</span>
-                  {metrics.dataUpdatedAt > 0 ? <TimeText iso={new Date(metrics.dataUpdatedAt).toISOString()} timeOnly /> : <span className="fx-dim">…</span>}
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Last metrics scrape</span>
+                  {metrics.dataUpdatedAt > 0 ? <TimeText iso={new Date(metrics.dataUpdatedAt).toISOString()} timeOnly /> : <span className="text-xs text-muted-foreground">…</span>}
                 </div>
               </div>
             </div>
           </Panel>
 
-          <Panel {...rise(6)} title={<h2>Raw series</h2>} kicker="every fathom_* sample served" bodyClass="fx-panel__body--flush">
-            <table className="fx-series-table">
-              <caption className="sr-only">All <code>fathom_</code>-prefixed metric series in this scrape</caption>
-              <tbody>
-                {Object.values(map)
-                  .filter((fam) => fam.name.startsWith("fathom_"))
-                  .flatMap((fam) => fam.samples.map((s) => ({ fam: fam.name, s })))
-                  .map(({ fam, s }, i) => (
-                    <tr key={`${fam}-${i}`}>
-                      <td>{fam}</td>
-                      <td className="mono">{Object.entries(s.labels).map(([k, v]) => `${k}="${v}"`).join(" ") || "—"}</td>
-                      <td>{fmtVal(fam, s.value)}</td>
-                    </tr>
+          <Panel title={<h2>Raw series</h2>} kicker="every fathom_* sample served" bodyClass="p-0">
+            {rawRows.length === 0 ? (
+              <div className="p-5">
+                <EmptyState icon={<TriangleAlert className="size-5" />} title="No fathom_-prefixed series yet" hint="The process registers its metric series once the engine has state to report." />
+              </div>
+            ) : (
+              <Table>
+                <caption className="sr-only">All <code>fathom_</code>-prefixed metric series in this scrape</caption>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Series</TableHead>
+                    <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Labels</TableHead>
+                    <TableHead className="text-right text-xs text-muted-foreground uppercase tracking-wide">Value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rawRows.map(({ fam, s }, i) => (
+                    <TableRow key={`${fam}-${i}`}>
+                      <TableCell className="font-mono text-foreground">{fam}</TableCell>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {Object.entries(s.labels).map(([k, v]) => `${k}="${v}"`).join(" ") || "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">{fmtVal(fam, s.value)}</TableCell>
+                    </TableRow>
                   ))}
-                {Object.values(map).filter((f) => f.name.startsWith("fathom_") && f.samples.length > 0).length === 0 && (
-                  <tr>
-                    <td colSpan={3}>
-                      <EmptyState title="No fathom_-prefixed series yet" hint="The process registers its metric series once the engine has state to report." />
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </TableBody>
+              </Table>
+            )}
           </Panel>
         </>
       )}

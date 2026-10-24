@@ -532,3 +532,30 @@ export function Pager({ depth, onPrev, onNext, hasMore }: { depth: number; onPre
     </div>
   );
 }
+
+/* ------------------------------- page chrome ------------------------------ */
+
+/** The one page-header recipe every screen shares: eyebrow kicker, title,
+ *  honest sub-copy, and a right-hand slot for snapshot stamps / actions. */
+export function PageHeader({ kicker, title, sub, side }: { kicker: string; title: ReactNode; sub?: ReactNode; side?: ReactNode }) {
+  return (
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+      <div className="min-w-0">
+        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{kicker}</span>
+        <h1 className="mt-1 text-2xl leading-none font-semibold tracking-tight text-foreground">{title}</h1>
+        {sub && <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{sub}</p>}
+      </div>
+      {side && <div className="flex flex-wrap items-center gap-3">{side}</div>}
+    </div>
+  );
+}
+
+/** Readiness as a first-class fact: tone dot + text label, colour never alone. */
+export function HealthPill({ tone, label }: { tone: StatusTone; label: string }) {
+  return (
+    <span role="status" className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium", TONE[tone].badge)}>
+      <span className={cn("size-1.5 rounded-full", TONE[tone].dot)} aria-hidden="true" />
+      {label}
+    </span>
+  );
+}

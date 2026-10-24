@@ -1,11 +1,24 @@
-/* Workflow explorer. GET /v1/workflows is the only list seam the backend
-   serves: keyset paging via next_cursor, plus exact-match `state` and
-   `business_key` filters — that is the whole contract, so the filter bar
-   offers exactly those two and says so (no fake full-text search). Rows are
+/* Workflows explorer. The list API (GET /v1/workflows) is the only source; it
+   serves keyset paging via next_cursor, plus exact-match `state` and
+   `business_key` filters — that is the whole contract, so the filter bar offers
+   exactly those two and says so (no fake full-text search). Rows are
    WorkflowSummary: the backend does not send step counts on list rows, so no
-   step column is invented (gap honesty). */
-import { useMemo, useState, type CSSProperties } from "react";
+   step column is invented (gap honesty).
+
+   Phase 7 rebuild: TanStack Table drives the column model and sorting, shadcn
+   Table the markup. Sorting is CLIENT-SIDE over the currently loaded page only
+   — the keyset API has no sort parameter — and the footer says exactly that. */
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
+import { flexRender } from "@tanstack/react-table";
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  useLegacyTable,
+  type LegacyColumnDef,
+} from "@tanstack/react-table/legacy";
+import type { SortingState } from "@tanstack/table-core";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Plus, Search, X } from "lucide-react";
 
 import { useMetrics, useWorkflows } from "../api/hooks";
 import { workflowCensus } from "../api/prom";
@@ -17,6 +30,7 @@ import {
   LoadingRows,
   Pager,
   Panel,
+  PageHeader,
   RelTime,
   SnapshotAt,
   StatusBadge,
@@ -25,8 +39,10 @@ import {
   useCursorStack,
 } from "../components/ui";
 import { CreateWorkflowModal } from "../components/CreateWorkflowModal";
-import { IconPlus, IconSearch, IconWorkflows, IconX } from "../icons";
-import "./screens.css";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { WorkflowSummary } from "../api/types";
 
 const PAGE_SIZE = 25;
 
@@ -58,6 +74,7 @@ export function Workflows() {
   );
 
   const list = useWorkflows(query);
+  const rows = useMemo(() => list.data?.items ?? [], [list.data]);
 
   // durable per-state distribution from the engine's own census — annotates the
   // filter chips so the bar doubles as an at-a-glance ledger breakdown.
@@ -77,6 +94,84 @@ export function Workflows() {
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [list.data]);
 
+  const [sorting, setSorting] = useState<SortingState>([]);
+
+  const columns = useMemo<LegacyColumnDef<WorkflowSummary>[]>(
+    () => [
+      {
+        accessorKey: "id",
+        header: "Workflow",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <Link to={`/workflows/${row.original.id}`} className="font-mono text-foreground hover:text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+              {truncate(row.original.id, 20)}…
+            </Link>
+            <span onClick={(e) => e.stopPropagation()}>
+              <CopyChip value={row.original.id} bare />
+            </span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "def_name",
+        header: "Definition",
+        cell: ({ row }) => (
+          <div>
+            <span className="text-foreground">{row.original.def_name}</span>
+            <div className="font-mono text-xs text-muted-foreground">v{row.original.def_version}</div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "state",
+        header: "State",
+        cell: ({ row }) => <StatusBadge state={row.original.state} />,
+      },
+      {
+        accessorKey: "business_key",
+        header: "Business key",
+        cell: ({ row }) => (
+          <span className="font-mono text-muted-foreground" title={row.original.business_key}>
+            {truncate(row.original.business_key, 28)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "created_at",
+        header: "Created",
+        cell: ({ row }) => (
+          <div>
+            <TimeText iso={row.original.created_at} />
+            <div className="text-xs text-muted-foreground"><RelTime iso={row.original.created_at} /></div>
+          </div>
+        ),
+      },
+      {
+        id: "updated",
+        accessorFn: (w) => w.updated_at,
+        header: "Updated",
+        cell: ({ row }) => (
+          <div>
+            <TimeText iso={row.original.updated_at} />
+            {row.original.finished_at && (
+              <div className="text-xs text-muted-foreground">finished <TimeText iso={row.original.finished_at} timeOnly /></div>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useLegacyTable({
+    data: rows,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
   const applyKeyFilter = (value: string) => {
     const next = new URLSearchParams(params);
     if (value.trim()) next.set("business_key", value.trim());
@@ -90,173 +185,181 @@ export function Workflows() {
     pages.reset();
   };
 
-  const hasRow = list.data && list.data.items.length > 0;
+  const hasRow = rows.length > 0;
 
   return (
-    <div className="fx-screen">
-      <div className="fx-page-head">
-        <div>
-          <span className="kicker">Explorer</span>
-          <h1>Workflows</h1>
-          <p className="fx-page-sub">
-            Newest first, keyed by UUIDv7 time ordering. Filters are exact-match — the backend
-            offers no fuzzy search.
-          </p>
-        </div>
-        <div className="fx-page-head__side">
-          {list.dataUpdatedAt > 0 && <SnapshotAt updatedAt={list.dataUpdatedAt} />}
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => setCreating(true)}>
-            <IconPlus size={14} />
-            <span>New workflow</span>
-          </button>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-[1400px]">
+      <PageHeader
+        kicker="Explorer"
+        title="Workflows"
+        sub={<>Newest first, keyed by UUIDv7 time ordering. Filters are exact-match — the backend offers no fuzzy search.</>}
+        side={
+          <>
+            {list.dataUpdatedAt > 0 && <SnapshotAt updatedAt={list.dataUpdatedAt} />}
+            <Button size="sm" onClick={() => setCreating(true)}>
+              <Plus className="size-4" />
+              New workflow
+            </Button>
+          </>
+        }
+      />
 
-      <div className="fx-filters" role="search">
+      <div className="mb-4 flex flex-col gap-3" role="search">
         <form
-          className="fx-filters__form"
+          className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             applyKeyFilter(keyDraft);
           }}
         >
-          <IconSearch size={14} />
-          <input
-            className="input"
-            value={keyDraft}
-            onChange={(e) => setKeyDraft(e.target.value)}
-            placeholder="business key — exact match"
-            aria-label="Filter by exact business key"
-          />
+          <div className="relative flex-1 sm:max-w-sm">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              className="pl-9"
+              value={keyDraft}
+              onChange={(e) => setKeyDraft(e.target.value)}
+              placeholder="business key — exact match"
+              aria-label="Filter by exact business key"
+            />
+          </div>
+          <Button type="submit" variant="outline" size="sm">Apply</Button>
           {businessKey && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => applyKeyFilter("")} aria-label="Clear business key filter">
-              <IconX size={12} />
-              <span>clear</span>
-            </button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => applyKeyFilter("")} aria-label="Clear business key filter">
+              <X className="size-3.5" />
+              clear
+            </Button>
           )}
         </form>
 
-        <div className="fx-filters__chips" role="group" aria-label="Filter by state">
-          <button type="button" className={`fx-chip ${state === "" ? "fx-chip--on" : ""}`} onClick={() => pickState("")}>
-            All states
-            {censusTotal > 0 && <span className="fx-chip__n num">{censusTotal}</span>}
-          </button>
-          {WORKFLOW_STATES.map((s) => {
-            const n = countByState.get(s) ?? 0;
-            return (
-              <button
-                key={s}
-                type="button"
-                className={`fx-chip fx-chip--state${n === 0 ? " fx-chip--empty" : ""} ${state === s ? "fx-chip--on" : ""}`}
-                onClick={() => pickState(s)}
-              >
-                <span className={`fx-dot fx-dot--${workflowStatus(s).tone}`} aria-hidden="true" />
-                {workflowStatus(s).label}
-                {n > 0 && <span className="fx-chip__n num">{n}</span>}
-              </button>
-            );
-          })}
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by state">
+          <StateChip active={state === ""} onClick={() => pickState("")} label="All states" count={censusTotal || undefined} />
+          {WORKFLOW_STATES.map((s) => (
+            <StateChip
+              key={s}
+              active={state === s}
+              onClick={() => pickState(s)}
+              label={workflowStatus(s).label}
+              toneVarName={toneVar(workflowStatus(s).tone)}
+              count={countByState.get(s) || undefined}
+            />
+          ))}
         </div>
       </div>
 
-      <Panel bodyClass="fx-panel__body--flush" className="fx-rise" style={{ "--fx-rise-i": 0 } as CSSProperties}>
-        {list.isLoading && <LoadingRows rows={6} />}
+      <Panel bodyClass="p-0">
+        {list.isLoading && <div className="p-5"><LoadingRows rows={6} /></div>}
         {list.isError && (
-          <div style={{ padding: 16 }}>
+          <div className="p-5">
             <ErrorState error={list.error} onRetry={() => list.refetch()} />
           </div>
         )}
         {list.data && !hasRow && (
-          <EmptyState
-            icon={<IconWorkflows size={22} />}
-            title={businessKey || state ? "Nothing matches these filters" : "No workflows yet"}
-            hint={
-              businessKey || state
-                ? "Widen the state filter or clear the business key to see the full ledger."
-                : "Create one with “New workflow” — the engine queues it and a worker claims the first step."
-            }
-          />
+          <div className="p-5">
+            <EmptyState
+              icon={<Search className="size-5" />}
+              title={businessKey || state ? "Nothing matches these filters" : "No workflows yet"}
+              hint={
+                businessKey || state
+                  ? "Widen the state filter or clear the business key to see the full ledger."
+                  : "Create one with “New workflow” — the engine queues it and a worker claims the first step."
+              }
+            />
+          </div>
         )}
         {hasRow && (
-          <table className="tbl">
+          <Table>
             <caption className="sr-only">Workflows, newest first</caption>
-            <thead>
-              <tr>
-                <th scope="col">Workflow</th>
-                <th scope="col">Definition</th>
-                <th scope="col">State</th>
-                <th scope="col">Business key</th>
-                <th scope="col">Created</th>
-                <th scope="col">Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.data!.items.map((w) => (
-                <tr
-                  key={w.id}
-                  className="fx-link-row fx-row"
-                  style={{ "--fx-row-tone": toneVar(workflowStatus(w.state).tone) } as CSSProperties}
-                  onClick={() => navigate(`/workflows/${w.id}`)}
-                >
-                  <td>
-                    <Link to={`/workflows/${w.id}`} className="mono fx-cell-id">
-                      {truncate(w.id, 20)}…
-                    </Link>
-                    <span onClick={(e) => e.stopPropagation()}>
-                      <CopyChip value={w.id} bare />
-                    </span>
-                  </td>
-                  <td>
-                    <span className="fx-wfstate">{w.def_name}</span>
-                    <div className="fx-cell-id">v{w.def_version}</div>
-                  </td>
-                  <td>
-                    <StatusBadge state={w.state} />
-                  </td>
-                  <td>
-                    <span className="fx-cell-key mono" title={w.business_key}>
-                      {w.business_key}
-                    </span>
-                  </td>
-                  <td>
-                    <TimeText iso={w.created_at} />
-                    <div className="fx-cell-id"><RelTime iso={w.created_at} /></div>
-                  </td>
-                  <td>
-                    <TimeText iso={w.updated_at} />
-                    {w.finished_at && <div className="fx-cell-id">finished <TimeText iso={w.finished_at} timeOnly /></div>}
-                  </td>
-                </tr>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id} className="hover:bg-transparent">
+                  {hg.headers.map((header) => {
+                    const canSort = header.column.getCanSort();
+                    const sorted = header.column.getIsSorted();
+                    return (
+                      <TableHead key={header.id} className="text-xs text-muted-foreground uppercase tracking-wide">
+                        {header.isPlaceholder ? null : canSort ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 hover:text-foreground"
+                            onClick={header.column.getToggleSortingHandler()}
+                            aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none"}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {sorted === "asc" ? <ArrowUp className="size-3.5" /> : sorted === "desc" ? <ArrowDown className="size-3.5" /> : <ChevronsUpDown className="size-3.5 opacity-50" />}
+                          </button>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer"
+                  style={{ boxShadow: `inset 3px 0 0 ${toneVar(workflowStatus(row.original.state).tone)}` }}
+                  onClick={() => navigate(`/workflows/${row.original.id}`)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
         {hasRow && (
-          <div className="fx-panel__foot">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 px-5 py-3">
             <Pager
               depth={pages.depth}
               hasMore={!!list.data!.next_cursor}
               onPrev={() => pages.pop()}
               onNext={() => list.data!.next_cursor && pages.push(list.data!.next_cursor)}
             />
-          </div>
-        )}
-        {hasRow && (
-          <div className="fx-ledger">
-            <span className="fx-ledger__k">Definition mix on this page</span>
-            {defMix.map(([d, n]) => (
-              <span key={d} className="fx-ledger__chip">
-                {d} <b className="num">×{n}</b>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium uppercase tracking-[0.14em]">Definition mix on this page</span>
+              {defMix.map(([d, n]) => (
+                <span key={d} className="rounded-full border border-border/60 bg-ice px-2 py-0.5">
+                  {d} <b className="font-mono">×{n}</b>
+                </span>
+              ))}
+              <span>
+                page shows {rows.length} workflow{rows.length === 1 ? "" : "s"} · sorted columns apply to this page only
               </span>
-            ))}
-            <span className="fx-ledger__n">
-              page shows {list.data!.items.length} workflow{list.data!.items.length === 1 ? "" : "s"} · newest first
-            </span>
+            </div>
           </div>
         )}
       </Panel>
 
       {creating && <CreateWorkflowModal onClose={() => setCreating(false)} />}
     </div>
+  );
+}
+
+function StateChip({ active, onClick, label, count, toneVarName }: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+  toneVarName?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+        active ? "border-primary/40 bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
+      }`}
+    >
+      {toneVarName && <span className="size-1.5 rounded-full" style={{ background: toneVarName }} aria-hidden="true" />}
+      {label}
+      {count !== undefined && <span className="font-mono tabular-nums opacity-70">{count}</span>}
+    </button>
   );
 }

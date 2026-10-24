@@ -1,29 +1,34 @@
 /* Overview dashboard. Every number is a live fact: the state census comes
    from fathom_workflows_total (a durable DB GROUP BY), recent activity from
-   the newest page of GET /workflows, operational signals from the eleven
-   wired series. No sparkline trends exist to show (gap G4) — none are drawn. */
+   the newest page of GET /workflows, operational signals from the wired series.
+   No sparkline trends exist to show (gap G4) — none are drawn. Phase 7 rebuild
+   on Glacier Glass: Tailwind layout, shadcn Alert, kit KpiCard/Panel/HealthPill,
+   Recharts census. */
 import { Link } from "react-router";
+import { AlertOctagon, Check, Clock, ListChecks, Play, TriangleAlert } from "lucide-react";
 
 import { useMetrics, useReadyz, useWorkflows } from "../api/hooks";
 import { byLabel, gaugeValue, workflowCensus } from "../api/prom";
 import { workflowStatus } from "../theme/status";
-import { Panel, SnapshotAt, EmptyState, ErrorState, LoadingRows, StatusBadge, TimeText, RelTime, KpiCard } from "../components/ui";
-import { BarList, Donut, GaugeRing } from "../components/charts";
 import {
-  IconCheck,
-  IconClock,
-  IconDeadLetter,
-  IconPlay,
-  IconAlert,
-  IconWorkflows,
-} from "../icons";
-import type { CSSProperties } from "react";
-import "./screens.css";
+  EmptyState,
+  ErrorState,
+  HealthPill,
+  KpiCard,
+  LoadingRows,
+  PageHeader,
+  Panel,
+  RelTime,
+  SnapshotAt,
+  StatusBadge,
+  TimeText,
+} from "../components/ui";
+import { BarList, Donut, GaugeRing } from "../components/charts";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 const ACTIVE = ["QUEUED", "RUNNING", "RETRY_WAITING", "COMPENSATING", "CANCELLING"];
 const NEGATIVE = ["FAILED", "ABORTED"];
-
-const rise = (i: number) => ({ className: "fx-rise", style: { "--fx-rise-i": i } as CSSProperties });
 
 export function Overview() {
   const metrics = useMetrics();
@@ -63,99 +68,100 @@ export function Overview() {
   const leases = metrics.data ? gaugeValue(metrics.data, "fathom_worker_leases_held") : null;
 
   return (
-    <div className="fx-screen">
-      <div className="fx-page-head">
-        <div>
-          <span className="kicker">Control plane</span>
-          <h1>Overview</h1>
-          <p className="fx-page-sub">
-            Durable census from the engine's own series — counts reflect every workflow ever created,
-            grouped by their current state.
-          </p>
-        </div>
-        <div className="fx-page-head__side">
-          {metrics.dataUpdatedAt > 0 && <SnapshotAt updatedAt={metrics.dataUpdatedAt} />}
-          <span className={`fx-health fx-health--${readyness.tone}`} role="status">
-            <span className="fx-health__dot" aria-hidden="true" />
-            {readyness.label}
-          </span>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-[1400px]">
+      <PageHeader
+        kicker="Control plane"
+        title="Overview"
+        sub="Durable census from the engine's own series — counts reflect every workflow ever created, grouped by their current state."
+        side={
+          <>
+            {metrics.dataUpdatedAt > 0 && <SnapshotAt updatedAt={metrics.dataUpdatedAt} />}
+            <HealthPill tone={readyness.tone} label={readyness.label} />
+          </>
+        }
+      />
 
       {degraded && (
-        <div className="fx-banner fx-banner--degraded" role="alert">
-          <IconAlert size={18} aria-hidden="true" />
-          <div>
-            <strong>Control plane degraded</strong>
-            <span> {readyness.label}. Workflow state below is the last known census; new placements may not advance until readiness recovers.</span>
-          </div>
-        </div>
+        <Alert variant="destructive" className="mb-5 border-st-negative/40 bg-st-negative/5">
+          <TriangleAlert aria-hidden="true" />
+          <AlertTitle>Control plane degraded</AlertTitle>
+          <AlertDescription>
+            {readyness.label}. Workflow state below is the last known census; new placements may not
+            advance until readiness recovers.
+          </AlertDescription>
+        </Alert>
       )}
 
-      <div className="fx-kpi">
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {metrics.isError ? (
-          <div className="fx-kpi__err">
+          <div className="sm:col-span-2 xl:col-span-5">
             <ErrorState error={metrics.error} onRetry={() => metrics.refetch()} />
           </div>
         ) : metrics.isLoading ? (
-          <div className="fx-kpi__err"><LoadingRows rows={2} /></div>
+          <div className="sm:col-span-2 xl:col-span-5">
+            <LoadingRows rows={2} />
+          </div>
         ) : (
           <>
-            <KpiCard index={0} kicker="Total workflows" value={total} sub={census.length > 0 ? "live census" : "no data yet"} icon={<IconWorkflows size={16} />} tone="neutral" />
-            <KpiCard index={1} kicker="Completed" value={completed} sub="terminal · immutable" icon={<IconCheck size={16} />} tone="completed" />
-            <KpiCard index={2} kicker="Active" value={active} sub="queued · running · retry · compensating" icon={<IconPlay size={16} />} tone="running" />
-            <KpiCard index={3} kicker="Failed / aborted" value={failed} sub="terminal · negative" icon={<IconAlert size={16} />} tone="negative" />
+            <KpiCard index={0} kicker="Total workflows" value={total} sub={census.length > 0 ? "live census" : "no data yet"} icon={<ListChecks className="size-4" />} tone="neutral" />
+            <KpiCard index={1} kicker="Completed" value={completed} sub="terminal · immutable" icon={<Check className="size-4" />} tone="completed" />
+            <KpiCard index={2} kicker="Active" value={active} sub="queued · running · retry · compensating" icon={<Play className="size-4" />} tone="running" />
+            <KpiCard index={3} kicker="Failed / aborted" value={failed} sub="terminal · negative" icon={<AlertOctagon className="size-4" />} tone="negative" />
             <KpiCard
               index={4}
               kicker="Manual intervention"
               value={manual}
-              sub={<Link to="/dlq">open dead letters →</Link>}
-              icon={<IconDeadLetter size={16} />}
+              sub={<Link to="/dlq" className="text-primary underline-offset-4 hover:underline">open dead letters →</Link>}
+              icon={<TriangleAlert className="size-4" />}
               tone="manual"
             />
           </>
         )}
       </div>
 
-      <div className="fx-grid-2">
-        <Panel {...rise(0)} title={<h2>State census</h2>} kicker="fathom_workflows_total">
+      <div className="mb-5 grid gap-4 lg:grid-cols-2">
+        <Panel title={<h2>State census</h2>} kicker="fathom_workflows_total">
           <Donut slices={slices} total={total} />
         </Panel>
 
         <Panel
-          {...rise(1)}
           title={<h2>Recent activity</h2>}
           kicker="newest first"
           actions={
-            <Link className="btn btn-sm" to="/workflows">
-              View all
-            </Link>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/workflows">View all</Link>
+            </Button>
           }
-          bodyClass="fx-panel__body--flush"
+          bodyClass="p-0"
         >
-          {recent.isLoading && <LoadingRows rows={5} />}
-          {recent.isError && <div style={{ padding: 16 }}><ErrorState error={recent.error} onRetry={() => recent.refetch()} /></div>}
+          {recent.isLoading && <div className="p-5"><LoadingRows rows={5} /></div>}
+          {recent.isError && <div className="p-5"><ErrorState error={recent.error} onRetry={() => recent.refetch()} /></div>}
           {recent.data && recent.data.items.length === 0 && (
-            <EmptyState
-              icon={<IconClock size={20} />}
-              title="No workflows yet"
-              hint="Create one with “New workflow” above — the engine queues it and a worker picks it up within seconds."
-            />
+            <div className="p-5">
+              <EmptyState
+                icon={<Clock className="size-5" />}
+                title="No workflows yet"
+                hint="Create one with “New workflow” above — the engine queues it and a worker picks it up within seconds."
+              />
+            </div>
           )}
           {recent.data && recent.data.items.length > 0 && (
-            <ul className="fx-activity">
+            <ul className="flex flex-col">
               {recent.data.items.map((w) => (
                 <li key={w.id}>
-                  <Link to={`/workflows/${w.id}`} className="fx-activity__row">
-                    <span className={`fx-dot fx-dot--${workflowStatus(w.state).tone}`} aria-hidden="true" />
-                    <span className="fx-activity__main">
-                      <span className="fx-activity__title">
-                        {w.def_name} <span className="fx-dim mono">v{w.def_version}</span>
+                  <Link
+                    to={`/workflows/${w.id}`}
+                    className="flex items-center gap-3 border-b border-border/40 px-5 py-3 transition-colors last:border-b-0 hover:bg-accent/50"
+                  >
+                    <span className={`size-2 shrink-0 rounded-full`} style={{ background: `var(--st-${workflowStatus(w.state).tone})` }} aria-hidden="true" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-foreground">
+                        {w.def_name} <span className="font-mono text-xs text-muted-foreground">v{w.def_version}</span>
                       </span>
-                      <span className="fx-activity__key mono">{w.business_key}</span>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">{w.business_key}</span>
                     </span>
                     <StatusBadge state={w.state} size="sm" />
-                    <span className="fx-activity__time"><RelTime iso={w.created_at} /></span>
+                    <span className="w-16 shrink-0 text-right text-xs text-muted-foreground"><RelTime iso={w.created_at} /></span>
                   </Link>
                 </li>
               ))}
@@ -164,36 +170,36 @@ export function Overview() {
         </Panel>
       </div>
 
-      <div className="fx-grid-3">
-        <Panel {...rise(2)} title={<h2>Ingress classification</h2>} kicker="fathom_events_classified_total">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Panel title={<h2>Ingress classification</h2>} kicker="fathom_events_classified_total">
           <BarList rows={classified} emptyText="No inbound events classified yet." />
         </Panel>
 
-        <Panel {...rise(3)} title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
+        <Panel title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
           {dlqDepth.length === 0 ? (
-            <p className="fx-chart-empty">Queue is empty — nothing awaits manual intervention.</p>
+            <p className="text-xs text-muted-foreground">Queue is empty — nothing awaits manual intervention.</p>
           ) : (
             <BarList rows={dlqDepth} tone="violet" />
           )}
         </Panel>
 
-        <Panel {...rise(4)} title={<h2>System pulse</h2>} kicker="bounded gauges">
-          <div className="fx-pulse-row">
+        <Panel title={<h2>System pulse</h2>} kicker="bounded gauges">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
             <GaugeRing value={oldestOpen} max={3600} label="Oldest open workflow (budget 1 h)" />
-            <div className="fx-pulse-side">
-              <div className="fx-pulse-metric">
-                <span className="kicker">Outbox backlog</span>
-                <span className="fx-pulse-metric__v num">{outboxDepth ?? "—"}</span>
-                <span className="fx-dim">rows awaiting relay publish</span>
+            <div className="flex min-w-32 flex-1 flex-col gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Outbox backlog</span>
+                <span className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">{outboxDepth ?? "—"}</span>
+                <span className="text-xs text-muted-foreground">rows awaiting relay publish</span>
               </div>
-              <div className="fx-pulse-metric">
-                <span className="kicker">Live step leases</span>
-                <span className="fx-pulse-metric__v num">{leases ?? "—"}</span>
-                <span className="fx-dim">claimed by worker pools</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Live step leases</span>
+                <span className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">{leases ?? "—"}</span>
+                <span className="text-xs text-muted-foreground">claimed by worker pools</span>
               </div>
-              <div className="fx-pulse-metric">
-                <span className="kicker">Last readyz probe</span>
-                {readyz.dataUpdatedAt > 0 ? <TimeText iso={new Date(readyz.dataUpdatedAt).toISOString()} timeOnly /> : <span className="fx-dim">…</span>}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Last readyz probe</span>
+                {readyz.dataUpdatedAt > 0 ? <TimeText iso={new Date(readyz.dataUpdatedAt).toISOString()} timeOnly /> : <span className="text-xs text-muted-foreground">…</span>}
               </div>
             </div>
           </div>
