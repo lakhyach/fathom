@@ -342,10 +342,10 @@ Phase commits on `main`, oldest first:
 | `b083500` | M7 delete the retired `fx-*` design system and dead dependencies |
 | `ca6c8c0` | **M8 measured a11y pass + removal of the last legacy hooks + DLQ unit tests** |
 | `6f0a2f7` | **M8 typecheck gate repaired** — `npm run typecheck` no longer emits compiled `.js` into `web/src` (§10 gate 3) |
-| *(tip)* | this report — the commit immediately following `6f0a2f7`; `git log -1 --oneline` |
+| `c549af3` | **this report** — `docs/PHASE_7_DESIGN_SYSTEM_REPLACEMENT_REPORT.md` |
 
-Baseline: `bbaffe4` (Phase 6.7). Committed delta across the nine commits above: 68 files,
-+7,632 / −6,259 (`git diff --shortstat bbaffe4..HEAD`) — this report is additional.
+Baseline: `bbaffe4` (Phase 6.7). Committed delta across the nine code commits above
+(`git diff --shortstat bbaffe4..6f0a2f7`): 68 files, +7,632 / −6,259. This report adds one file.
 
 ### Evidence locations (local, git-ignored)
 
