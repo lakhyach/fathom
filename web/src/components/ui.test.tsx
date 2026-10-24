@@ -7,12 +7,15 @@ describe("StatusBadge", () => {
   it("renders the human label and a tone class — colour plus text, never colour alone", () => {
     render(<StatusBadge state="COMPENSATING" />);
     expect(screen.getByText("Compensating")).toBeInTheDocument();
-    expect(document.querySelector(".fx-badge--compensating")).not.toBeNull();
+    const badge = document.querySelector('[data-slot="badge"][data-tone="compensating"]');
+    expect(badge).not.toBeNull();
+    expect(badge?.className).toContain("text-st-compensating");
   });
 
   it("shows an accessible alert marker on FAILED_MANUAL", () => {
     const { container } = render(<StatusBadge state="FAILED_MANUAL" />);
-    expect(container.querySelector(".fx-badge--manual")).not.toBeNull();
+    expect(container.querySelector('[data-tone="manual"]')).not.toBeNull();
+    expect(container.querySelector('[data-tone="manual"] svg')).not.toBeNull();
     expect(screen.getByText("Failed · manual")).toBeInTheDocument();
   });
 

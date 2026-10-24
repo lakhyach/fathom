@@ -81,9 +81,10 @@ export function classificationStatus(cls: string | null | undefined): StatusMeta
   return CLASSIFICATION[cls] ?? { ...FALLBACK, label: cls };
 }
 
-/** CSS custom property for a tone — components use this, never a literal. */
+/** CSS custom property for a tone — components use this, never a literal.
+ *  Phase 7: Glacier Glass tokens (--st-*); the retired fx-* layer is gone. */
 export function toneVar(tone: StatusTone): string {
-  return `var(--fx-st-${tone})`;
+  return `var(--st-${tone})`;
 }
 
 /** Ordered state list for filter chips — mirrors the API's listStates gate. */

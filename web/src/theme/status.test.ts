@@ -36,6 +36,6 @@ describe("status mapping (single source of truth)", () => {
   });
 
   it("exposes a token per tone (components never hard-code colour)", () => {
-    expect(toneVar("compensating")).toBe("var(--fx-st-compensating)");
+    expect(toneVar("compensating")).toBe("var(--st-compensating)");
   });
 });
