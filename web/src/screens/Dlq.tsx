@@ -27,6 +27,7 @@ import {
   Panel,
   SnapshotAt,
   StatusBadge,
+  TONE,
   TimeText,
   humanDuration,
   truncate,
@@ -35,6 +36,7 @@ import {
 } from "../components/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { DeadLetter, ResolveResult } from "../api/types";
 
 const LIMIT = 20;
@@ -127,7 +129,7 @@ export function Dlq() {
       {items.map((d) => (
         <Panel key={d.id} className={`mb-4 ${d.resolved_at ? "opacity-70" : ""}`}>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-st-manual/30 bg-st-manual/10 px-2 py-0.5 text-xs font-medium text-st-manual">{d.class}</span>
+            <span className={cn("rounded-md px-2 py-0.5 text-xs font-medium", TONE.manual.badge)}>{d.class}</span>
             {d.reason_code && d.reason_code !== d.class && (
               <span className="font-mono text-xs text-muted-foreground">{d.reason_code}</span>
             )}

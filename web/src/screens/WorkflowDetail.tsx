@@ -341,7 +341,7 @@ function GraphPanel({ nodes, edges, steps, wf, updatedAt, chosen, onPick }: {
 
   return (
     <section className="surface-card overflow-hidden rounded-xl">
-      <div ref={stageRef} className="fx-graph h-[300px] w-full overflow-hidden border-b border-border/60 lg:h-[326px]" role="group" aria-label="Workflow execution graph (visual) — use the step list for keyboard access">
+      <div ref={stageRef} className="flow-stage h-[300px] w-full overflow-hidden border-b border-border/60 lg:h-[326px]" role="group" aria-label="Workflow execution graph (visual) — use the step list for keyboard access">
         <ReactFlow
           nodes={nodes}
           edges={edges}

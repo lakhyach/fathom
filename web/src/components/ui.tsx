@@ -34,16 +34,20 @@ import { useSettings } from "../state/settings";
 
 /* ------------------------------ tone vocabulary ---------------------------- */
 
-/** One tone→class map for the whole app. Static strings so the Tailwind
- *  scanner emits them; colour never travels without the label text. */
+/** Engine state → classes. One place, so a badge, a dot and a KPI numeral can
+ *  never drift apart. The chip keeps its hue in the ring, the tint and the dot
+ *  (WCAG graphic rule: 3:1) and sets the label in frost foreground: measured
+ *  against the 10% self-tint under the surface-card veil, same-tone label text
+ *  caps near 4.3:1, which is under the 4.5 AA floor for 10–12 px. Colour still
+ *  never travels alone — the label text co-renders in every case. */
 export const TONE: Record<StatusTone, { badge: string; dot: string; text: string; soft: string }> = {
-  completed:     { badge: "border-st-completed/30 bg-st-completed/10 text-st-completed",     dot: "bg-st-completed",     text: "text-st-completed",     soft: "bg-st-completed/10" },
-  running:       { badge: "border-st-running/30 bg-st-running/10 text-st-running",           dot: "bg-st-running",       text: "text-st-running",       soft: "bg-st-running/10" },
-  compensating:  { badge: "border-st-compensating/30 bg-st-compensating/10 text-st-compensating", dot: "bg-st-compensating", text: "text-st-compensating", soft: "bg-st-compensating/10" },
-  negative:      { badge: "border-st-negative/30 bg-st-negative/10 text-st-negative",         dot: "bg-st-negative",      text: "text-st-negative",      soft: "bg-st-negative/10" },
-  manual:        { badge: "border-st-manual/30 bg-st-manual/10 text-st-manual",               dot: "bg-st-manual",        text: "text-st-manual",        soft: "bg-st-manual/10" },
-  pending:       { badge: "border-st-pending/30 bg-st-pending/10 text-st-pending",            dot: "bg-st-pending",       text: "text-st-pending",       soft: "bg-st-pending/10" },
-  warn:          { badge: "border-st-warn/30 bg-st-warn/10 text-st-warn",                     dot: "bg-st-warn",          text: "text-st-warn",          soft: "bg-st-warn/10" },
+  completed:     { badge: "border-st-completed/35 bg-st-completed/10 text-foreground",     dot: "bg-st-completed",     text: "text-st-completed",     soft: "bg-st-completed/10" },
+  running:       { badge: "border-st-running/35 bg-st-running/10 text-foreground",           dot: "bg-st-running",       text: "text-st-running",       soft: "bg-st-running/10" },
+  compensating:  { badge: "border-st-compensating/35 bg-st-compensating/10 text-foreground", dot: "bg-st-compensating", text: "text-st-compensating", soft: "bg-st-compensating/10" },
+  negative:      { badge: "border-st-negative/35 bg-st-negative/10 text-foreground",         dot: "bg-st-negative",      text: "text-st-negative",      soft: "bg-st-negative/10" },
+  manual:        { badge: "border-st-manual/35 bg-st-manual/10 text-foreground",               dot: "bg-st-manual",        text: "text-st-manual",        soft: "bg-st-manual/10" },
+  pending:       { badge: "border-st-pending/35 bg-st-pending/10 text-foreground",            dot: "bg-st-pending",       text: "text-st-pending",       soft: "bg-st-pending/10" },
+  warn:          { badge: "border-st-warn/35 bg-st-warn/10 text-foreground",                     dot: "bg-st-warn",          text: "text-st-warn",          soft: "bg-st-warn/10" },
 };
 
 /* ----------------------------- status badge ----------------------------- */

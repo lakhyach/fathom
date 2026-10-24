@@ -10,7 +10,12 @@ describe("StatusBadge", () => {
     expect(screen.getByText("Compensating")).toBeInTheDocument();
     const badge = document.querySelector('[data-slot="badge"][data-tone="compensating"]');
     expect(badge).not.toBeNull();
-    expect(badge?.className).toContain("text-st-compensating");
+    /* Hue lives in the ring, the tint and the dot; the label stays frost so it
+       clears AA against its own 10% tint. */
+    expect(badge?.className).toContain("border-st-compensating/35");
+    expect(badge?.className).toContain("bg-st-compensating/10");
+    expect(badge?.className).toContain("text-foreground");
+    expect(badge?.querySelector('[aria-hidden="true"].bg-st-compensating')).not.toBeNull();
   });
 
   it("shows an accessible alert marker on FAILED_MANUAL", () => {

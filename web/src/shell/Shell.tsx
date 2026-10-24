@@ -157,7 +157,7 @@ export function Shell() {
               )}
               title={role ? `Presented key acts with the ${role} role` : "No API key presented"}
             >
-              <span className={cn("grid size-6 place-items-center rounded-full font-mono text-[11px] font-semibold", role ? "bg-primary/15 text-primary" : "bg-st-warn/15 text-st-warn")}>
+              <span className={cn("grid size-6 place-items-center rounded-full font-mono text-[11px] font-semibold", role ? "bg-primary text-primary-foreground" : "bg-st-warn text-background")}>
                 {role ? roleLabel.charAt(0) : "?"}
               </span>
               <span className="flex flex-col leading-tight">
@@ -265,13 +265,19 @@ function RailContent({
               cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? "bg-primary/12 font-medium text-primary ring-1 ring-primary/20 ring-inset"
+                  ? "bg-primary/12 font-medium text-foreground ring-1 ring-primary/25 ring-inset"
                   : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
               )
             }
           >
-            <Icon className="size-4" />
-            <span>{label}</span>
+            {({ isActive }) => (
+              <>
+                {/* the hue lives in the graphic; the label stays frost-white so it
+                    clears AA on its own tint (measured 3.90 as text-primary) */}
+                <Icon className={cn("size-4", isActive && "text-primary")} />
+                <span>{label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

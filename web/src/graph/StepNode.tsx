@@ -46,7 +46,7 @@ export function StepNode({ data }: NodeProps<StepFlowNode>) {
     <div
       className={cn(
         "relative flex flex-col justify-between gap-2 rounded-lg border bg-card p-2.5 text-card-foreground shadow-sm transition-colors",
-        running && "fx-node--running",
+        running && "flow-node--running",
         selected && "ring-2 ring-primary",
       )}
       style={{ width: NODE_W, height: NODE_H, borderColor: tone }}

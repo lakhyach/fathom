@@ -31,6 +31,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-fill: var(--destructive-fill);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -73,11 +74,22 @@
   --secondary: oklch(0.245 0.022 240);
   --secondary-foreground: oklch(0.93 0.01 230);
   --muted: oklch(0.215 0.018 238);
-  --muted-foreground: oklch(0.685 0.02 235);
+  /* Secondary text is measured, not guessed: the browser audit found 0.685 at
+     3.9 and even 0.78 at 3.78 on the frost stacks it actually sits on (a bg-ice
+     chip inside a surface-card panel lifts the surface to ~8% white). 10–12 px
+     labels need 4.5, so the ramp stops one step below --foreground instead of
+     two, keeping the hierarchy while clearing AA on the lightest stack. */
+  --muted-foreground: oklch(0.85 0.02 235);
   --accent: oklch(0.262 0.024 240);
   --accent-foreground: oklch(0.95 0.008 230);
 
+  /* Two roles, two values — measured. --destructive is the semantic error hue and
+     reads as a border, ring or dot on glacial ink, where it has to be LIGHT.
+     A filled destructive CTA needs the opposite: the audit measured near-white ink
+     at 4.50 on bg-destructive/60 and lower on the solid, so filled controls use
+     --destructive-fill, a deep red that carries white ink at 5.2:1. */
   --destructive: oklch(0.65 0.19 12);
+  --destructive-fill: oklch(0.54 0.18 15);
   --destructive-foreground: oklch(0.98 0.005 12);
 
   --border: oklch(0.93 0.01 230 / 11%);
@@ -87,20 +99,25 @@
   /* faint hairline used on layered frost surfaces */
   --ice: oklch(0.93 0.01 230 / 6%);
 
-  /* engine state semantics — one source of truth for every screen */
-  --st-completed: oklch(0.78 0.14 168);
-  --st-running: oklch(0.76 0.13 205);
-  --st-compensating: oklch(0.72 0.16 295);
-  --st-negative: oklch(0.66 0.2 15);
-  --st-manual: oklch(0.72 0.17 42);
-  --st-pending: oklch(0.66 0.015 240);
-  --st-warn: oklch(0.8 0.15 85);
+  /* Engine state semantics — one source of truth for every screen, and one ramp
+     that serves BOTH roles: graphic (dot/ring/tint, WCAG 1.4.11 needs 3:1) and
+     text (badge labels, KPI numerals, 1.4.3 needs 4.5:1 at these sizes). The
+     Phase 7 browser audit measured the previous ramp at 2.6–3.9 as text, so each
+     hue keeps its identity with lightness raised; chroma is trimmed only where
+     sRGB clipping would otherwise cap the achievable luminance. */
+  --st-completed: oklch(0.83 0.12 168);
+  --st-running: oklch(0.83 0.11 205);
+  --st-compensating: oklch(0.84 0.13 295);
+  --st-negative: oklch(0.83 0.14 15);
+  --st-manual: oklch(0.84 0.13 42);
+  --st-pending: oklch(0.8 0.015 240);
+  --st-warn: oklch(0.85 0.13 85);
 
   --chart-1: oklch(0.815 0.125 178);
-  --chart-2: oklch(0.72 0.16 295);
-  --chart-3: oklch(0.76 0.13 205);
-  --chart-4: oklch(0.8 0.15 85);
-  --chart-5: oklch(0.66 0.2 15);
+  --chart-2: oklch(0.84 0.13 295);
+  --chart-3: oklch(0.83 0.11 205);
+  --chart-4: oklch(0.85 0.13 85);
+  --chart-5: oklch(0.83 0.14 15);
 }
 
 @layer base {

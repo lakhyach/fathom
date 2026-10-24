@@ -88,24 +88,24 @@ export function Settings() {
         <Panel title={<h2 className="text-sm font-semibold">API key</h2>} kicker="Authorization: Bearer …">
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="fx-keyspec">Key spec</Label>
+              <Label htmlFor="key-spec">Key spec</Label>
               <Input
-                id="fx-keyspec"
+                id="key-spec"
                 className="font-mono"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="label:role:key   —   e.g. ops:operator:deadbeef…"
                 spellCheck={false}
                 aria-invalid={draftInvalid}
-                aria-describedby={draftInvalid ? "fx-keyspec-err" : "fx-keyspec-hint"}
+                aria-describedby={draftInvalid ? "key-spec-error" : "key-spec-hint"}
                 autoComplete="off"
               />
-              <span id="fx-keyspec-hint" className="block text-xs text-muted-foreground">
+              <span id="key-spec-hint" className="block text-xs text-muted-foreground">
                 Accepted shapes: <code className="font-mono">label:role:key</code> (role = reader | operator | admin) or a
                 bare key of 8+ chars. Stored only in <code className="font-mono">localStorage</code> for this browser.
               </span>
               {draftInvalid && (
-                <span id="fx-keyspec-err" role="alert" className="block text-xs text-st-negative">
+                <span id="key-spec-error" role="alert" className="block text-xs text-st-negative">
                   Does not parse as a valid key spec.
                 </span>
               )}
@@ -345,33 +345,33 @@ function DefinitionsPanel({ canRegister, hasKey }: { canRegister: boolean; hasKe
 
           <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <div className="space-y-1.5">
-              <Label htmlFor="fx-def-name">Name</Label>
-              <Input id="fx-def-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={128} placeholder="booking" />
+              <Label htmlFor="definition-name">Name</Label>
+              <Input id="definition-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={128} placeholder="booking" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="fx-def-ver">Version</Label>
-              <Input id="fx-def-ver" className="font-mono" type="number" min={1} value={version} onChange={(e) => setVersion(e.target.value)} />
+              <Label htmlFor="definition-version">Version</Label>
+              <Input id="definition-version" className="font-mono" type="number" min={1} value={version} onChange={(e) => setVersion(e.target.value)} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="fx-def-steps">Steps document (JSON array)</Label>
+            <Label htmlFor="definition-steps">Steps document (JSON array)</Label>
             <Textarea
-              id="fx-def-steps"
+              id="definition-steps"
               className="font-mono text-xs"
               rows={6}
               value={stepsText}
               onChange={(e) => setStepsText(e.target.value)}
               spellCheck={false}
               aria-invalid={!stepsValid}
-              aria-describedby={stepsValid ? "fx-def-steps-hint" : "fx-def-steps-err"}
+              aria-describedby={stepsValid ? "definition-steps-hint" : "definition-steps-error"}
             />
             {!stepsValid && (
-              <span id="fx-def-steps-err" role="alert" className="block text-xs text-st-negative">
+              <span id="definition-steps-error" role="alert" className="block text-xs text-st-negative">
                 Must be a non-empty JSON array of objects, each with a “type”.
               </span>
             )}
-            <span id="fx-def-steps-hint" className="block text-xs text-muted-foreground">
+            <span id="definition-steps-hint" className="block text-xs text-muted-foreground">
               Fields per step: type · max_attempts · compensable · compensator_task · forward_timeout_secs.
               Definitions are immutable — re-registering an existing name+version answers 409.
             </span>

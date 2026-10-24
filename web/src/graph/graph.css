@@ -7,7 +7,7 @@
 
 /* Attribution stays visible: removing it requires a React Flow Pro licence the
    project does not hold. It is re-tokened into the system instead. */
-.fx-graph .react-flow__attribution {
+.flow-stage .react-flow__attribution {
   background: transparent;
   color: var(--muted-foreground);
   font-family: var(--font-mono);
@@ -15,41 +15,41 @@
   letter-spacing: 0.04em;
   opacity: 0.7;
 }
-.fx-graph .react-flow__attribution a {
+.flow-stage .react-flow__attribution a {
   color: inherit;
 }
-.fx-graph .react-flow__handle {
+.flow-stage .react-flow__handle {
   opacity: 0;
   width: 6px;
   height: 6px;
   border: none;
   background: transparent;
 }
-.fx-graph .react-flow__node {
+.flow-stage .react-flow__node {
   cursor: pointer;
   font-family: inherit;
 }
-.fx-graph .react-flow__edge-path {
+.flow-stage .react-flow__edge-path {
   stroke-linecap: round;
 }
-.fx-graph .react-flow__controls {
+.flow-stage .react-flow__controls {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 8px 24px -18px oklch(0 0 0 / 60%);
   overflow: hidden;
 }
-.fx-graph .react-flow__controls-button {
+.flow-stage .react-flow__controls-button {
   width: 26px;
   height: 26px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
   fill: var(--muted-foreground);
 }
-.fx-graph .react-flow__controls-button:hover {
+.flow-stage .react-flow__controls-button:hover {
   background: var(--accent);
   fill: var(--foreground);
 }
-.fx-graph .react-flow__controls-button svg {
+.flow-stage .react-flow__controls-button svg {
   fill: currentColor;
 }
 
@@ -63,6 +63,6 @@
     box-shadow: 0 1px 2px oklch(0 0 0 / 0.4), 0 0 0 3px oklch(0.8 0.14 190 / 0.16);
   }
 }
-.fx-node--running {
+.flow-node--running {
   animation: node-pulse 2.4s ease-in-out infinite;
 }

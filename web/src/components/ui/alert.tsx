@@ -8,8 +8,11 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: "bg-card text-card-foreground",
+        /* Destructive alerts carry the engine's negative-state ramp rather than
+           --destructive: the audit measured the latter at 3.9/3.6 as 14px text on
+           the red wash, while --st-negative clears AA on the same surface. */
         destructive:
-          "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 [&>svg]:text-current",
+          "bg-card text-st-negative *:data-[slot=alert-description]:text-st-negative/90 [&>svg]:text-current",
       },
     },
     defaultVariants: {
