@@ -1,5 +1,7 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath } from "node:url";
 
 // The cockpit talks to the control plane exclusively through this dev proxy:
 // the API serves loopback-only with bearer-key auth (api.LoopbackOnly, Phase 5)
@@ -12,7 +14,12 @@ export default defineConfig({
   // app's vite 8, so the arrays differ structurally. The runtime contract is
   // identical — cast across the two vite type universes at this single seam.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  plugins: [react()] as any,
+  plugins: [react(), tailwindcss()] as any,
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
   server: {
     proxy: {
       "/v1": { target: BACKEND, changeOrigin: false },
