@@ -29,7 +29,7 @@ import { Toaster } from "./ui/sonner";
 import { toast } from "sonner";
 
 import { describeError } from "../api/hooks";
-import { ConnectionError } from "../api/errors";
+import { AuthError, ConnectionError } from "../api/errors";
 import { classificationStatus, stepStatus, workflowStatus, type StatusMeta, type StatusTone } from "../theme/status";
 import { useSettings } from "../state/settings";
 /* MIGRATION(M7): only the rebuilt Shell/palette have left ui.css; every legacy
@@ -314,7 +314,13 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground">{v.headline}</p>
         {v.detail && <p className="mt-0.5 text-xs text-muted-foreground">{v.detail}</p>}
-        {v.kind === "auth" && <p className="mt-0.5 text-xs text-muted-foreground">Open <a className="text-primary underline-offset-4 hover:underline" href="/settings">Settings</a> and present an API key.</p>}
+        {v.kind === "auth" && (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {error instanceof AuthError && error.kind === "forbidden"
+              ? "The role on your presented key does not allow this verb — an operator or admin key is required."
+              : "Open Settings and present an API key."}
+          </p>
+        )}
         {v.traceId && <p className="mt-1 font-mono text-[11px] text-muted-foreground">trace {v.traceId}</p>}
       </div>
       {onRetry && (
