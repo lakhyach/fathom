@@ -5,7 +5,7 @@
    WorkflowSummary: the backend does not send step counts on list rows, so no
    step column is invented (gap honesty).
 
-   Phase 7 rebuild: TanStack Table drives the column model and sorting, shadcn
+   Built on: TanStack Table drives the column model and sorting, shadcn
    Table the markup. Sorting is CLIENT-SIDE over the currently loaded page only
    — the keyset API has no sort parameter — and the footer says exactly that. */
 import { useMemo, useState } from "react";
@@ -18,7 +18,7 @@ import {
   type LegacyColumnDef,
 } from "@tanstack/react-table/legacy";
 import type { SortingState } from "@tanstack/table-core";
-import { ArrowDown, ArrowUp, ChevronsUpDown, Plus, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Search, X } from "lucide-react";
 
 import { useMetrics, useWorkflows } from "../api/hooks";
 import { workflowCensus } from "../api/prom";
@@ -38,8 +38,14 @@ import {
   truncate,
   useCursorStack,
 } from "../components/ui";
-import { CreateWorkflowModal } from "../components/CreateWorkflowModal";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { WorkflowSummary } from "../api/types";
@@ -50,7 +56,6 @@ export function Workflows() {
   const [params, setParams] = useSearchParams();
   const businessKey = params.get("business_key") ?? "";
   const [state, setState] = useState("");
-  const [creating, setCreating] = useState(false);
   const [keyDraft, setKeyDraft] = useState(businessKey);
 
   // mirror an externally-changed ?business_key (e.g. the shell search bar) into
@@ -81,7 +86,9 @@ export function Workflows() {
   const metrics = useMetrics();
   const countByState = useMemo(() => {
     const m = new Map<string, number>();
-    if (metrics.data) for (const r of workflowCensus(metrics.data)) m.set(r.state, (m.get(r.state) ?? 0) + r.count);
+    if (metrics.data)
+      for (const r of workflowCensus(metrics.data))
+        m.set(r.state, (m.get(r.state) ?? 0) + r.count);
     return m;
   }, [metrics.data]);
   const censusTotal = [...countByState.values()].reduce((a, b) => a + b, 0);
@@ -90,7 +97,9 @@ export function Workflows() {
   // count, so the ledger footer states exactly what these rows contain.
   const defMix = useMemo(() => {
     const m = new Map<string, number>();
-    if (list.data) for (const w of list.data.items) m.set(w.def_name, (m.get(w.def_name) ?? 0) + 1);
+    if (list.data)
+      for (const w of list.data.items)
+        m.set(w.def_name, (m.get(w.def_name) ?? 0) + 1);
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [list.data]);
 
@@ -103,7 +112,11 @@ export function Workflows() {
         header: "Workflow",
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
-            <Link to={`/workflows/${row.original.id}`} className="font-mono text-foreground hover:text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+            <Link
+              to={`/workflows/${row.original.id}`}
+              className="font-mono text-foreground hover:text-primary hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
               {truncate(row.original.id, 20)}…
             </Link>
             <span onClick={(e) => e.stopPropagation()}>
@@ -118,7 +131,9 @@ export function Workflows() {
         cell: ({ row }) => (
           <div>
             <span className="text-foreground">{row.original.def_name}</span>
-            <div className="font-mono text-xs text-muted-foreground">v{row.original.def_version}</div>
+            <div className="font-mono text-xs text-muted-foreground">
+              v{row.original.def_version}
+            </div>
           </div>
         ),
       },
@@ -131,7 +146,10 @@ export function Workflows() {
         accessorKey: "business_key",
         header: "Business key",
         cell: ({ row }) => (
-          <span className="font-mono text-muted-foreground" title={row.original.business_key}>
+          <span
+            className="font-mono text-muted-foreground"
+            title={row.original.business_key}
+          >
             {truncate(row.original.business_key, 28)}
           </span>
         ),
@@ -142,7 +160,9 @@ export function Workflows() {
         cell: ({ row }) => (
           <div>
             <TimeText iso={row.original.created_at} />
-            <div className="text-xs text-muted-foreground"><RelTime iso={row.original.created_at} /></div>
+            <div className="text-xs text-muted-foreground">
+              <RelTime iso={row.original.created_at} />
+            </div>
           </div>
         ),
       },
@@ -154,7 +174,9 @@ export function Workflows() {
           <div>
             <TimeText iso={row.original.updated_at} />
             {row.original.finished_at && (
-              <div className="text-xs text-muted-foreground">finished <TimeText iso={row.original.finished_at} timeOnly /></div>
+              <div className="text-xs text-muted-foreground">
+                finished <TimeText iso={row.original.finished_at} timeOnly />
+              </div>
             )}
           </div>
         ),
@@ -192,15 +214,16 @@ export function Workflows() {
       <PageHeader
         kicker="Explorer"
         title="Workflows"
-        sub={<>Newest first, keyed by UUIDv7 time ordering. Filters are exact-match — the backend offers no fuzzy search.</>}
-        side={
+        sub={
           <>
-            {list.dataUpdatedAt > 0 && <SnapshotAt updatedAt={list.dataUpdatedAt} />}
-            <Button size="sm" onClick={() => setCreating(true)}>
-              <Plus className="size-4" />
-              New workflow
-            </Button>
+            Newest first, keyed by UUIDv7 time ordering. Filters are exact-match
+            — the backend offers no fuzzy search.
           </>
+        }
+        side={
+          list.dataUpdatedAt > 0 ? (
+            <SnapshotAt updatedAt={list.dataUpdatedAt} />
+          ) : undefined
         }
       />
 
@@ -213,7 +236,10 @@ export function Workflows() {
           }}
         >
           <div className="relative flex-1 sm:max-w-sm">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <Input
               className="pl-9"
               value={keyDraft}
@@ -222,17 +248,34 @@ export function Workflows() {
               aria-label="Filter by exact business key"
             />
           </div>
-          <Button type="submit" variant="outline" size="sm">Apply</Button>
+          <Button type="submit" variant="outline" size="sm">
+            Apply
+          </Button>
           {businessKey && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => applyKeyFilter("")} aria-label="Clear business key filter">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => applyKeyFilter("")}
+              aria-label="Clear business key filter"
+            >
               <X className="size-3.5" />
               clear
             </Button>
           )}
         </form>
 
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by state">
-          <StateChip active={state === ""} onClick={() => pickState("")} label="All states" count={censusTotal || undefined} />
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="group"
+          aria-label="Filter by state"
+        >
+          <StateChip
+            active={state === ""}
+            onClick={() => pickState("")}
+            label="All states"
+            count={censusTotal || undefined}
+          />
           {WORKFLOW_STATES.map((s) => (
             <StateChip
               key={s}
@@ -247,7 +290,11 @@ export function Workflows() {
       </div>
 
       <Panel bodyClass="p-0">
-        {list.isLoading && <div className="p-5"><LoadingRows rows={6} /></div>}
+        {list.isLoading && (
+          <div className="p-5">
+            <LoadingRows rows={6} />
+          </div>
+        )}
         {list.isError && (
           <div className="p-5">
             <ErrorState error={list.error} onRetry={() => list.refetch()} />
@@ -257,7 +304,11 @@ export function Workflows() {
           <div className="p-5">
             <EmptyState
               icon={<Search className="size-5" />}
-              title={businessKey || state ? "Nothing matches these filters" : "No workflows yet"}
+              title={
+                businessKey || state
+                  ? "Nothing matches these filters"
+                  : "No workflows yet"
+              }
               hint={
                 businessKey || state
                   ? "Widen the state filter or clear the business key to see the full ledger."
@@ -276,19 +327,40 @@ export function Workflows() {
                     const canSort = header.column.getCanSort();
                     const sorted = header.column.getIsSorted();
                     return (
-                      <TableHead key={header.id} className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <TableHead
+                        key={header.id}
+                        className="text-xs text-muted-foreground uppercase tracking-wide"
+                      >
                         {header.isPlaceholder ? null : canSort ? (
                           <button
                             type="button"
                             className="inline-flex items-center gap-1 hover:text-foreground"
                             onClick={header.column.getToggleSortingHandler()}
-                            aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none"}
+                            aria-sort={
+                              sorted === "asc"
+                                ? "ascending"
+                                : sorted === "desc"
+                                  ? "descending"
+                                  : "none"
+                            }
                           >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {sorted === "asc" ? <ArrowUp className="size-3.5" /> : sorted === "desc" ? <ArrowDown className="size-3.5" /> : <ChevronsUpDown className="size-3.5 opacity-50" />}
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                            {sorted === "asc" ? (
+                              <ArrowUp className="size-3.5" />
+                            ) : sorted === "desc" ? (
+                              <ArrowDown className="size-3.5" />
+                            ) : (
+                              <ChevronsUpDown className="size-3.5 opacity-50" />
+                            )}
                           </button>
                         ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
+                          flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )
                         )}
                       </TableHead>
                     );
@@ -301,12 +373,17 @@ export function Workflows() {
                 <TableRow
                   key={row.id}
                   className="cursor-pointer"
-                  style={{ boxShadow: `inset 3px 0 0 ${toneVar(workflowStatus(row.original.state).tone)}` }}
+                  style={{
+                    boxShadow: `inset 3px 0 0 ${toneVar(workflowStatus(row.original.state).tone)}`,
+                  }}
                   onClick={() => navigate(`/workflows/${row.original.id}`)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -320,29 +397,41 @@ export function Workflows() {
               depth={pages.depth}
               hasMore={!!list.data!.next_cursor}
               onPrev={() => pages.pop()}
-              onNext={() => list.data!.next_cursor && pages.push(list.data!.next_cursor)}
+              onNext={() =>
+                list.data!.next_cursor && pages.push(list.data!.next_cursor)
+              }
             />
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-medium uppercase tracking-[0.14em]">Definition mix on this page</span>
+              <span className="font-medium uppercase tracking-[0.14em]">
+                Definition mix on this page
+              </span>
               {defMix.map(([d, n]) => (
-                <span key={d} className="rounded-full border border-border/60 bg-ice px-2 py-0.5">
+                <span
+                  key={d}
+                  className="rounded-full border border-border/60 bg-chip px-2 py-0.5"
+                >
                   {d} <b className="font-mono">×{n}</b>
                 </span>
               ))}
               <span>
-                page shows {rows.length} workflow{rows.length === 1 ? "" : "s"} · sorted columns apply to this page only
+                page shows {rows.length} workflow{rows.length === 1 ? "" : "s"}{" "}
+                · sorted columns apply to this page only
               </span>
             </div>
           </div>
         )}
       </Panel>
-
-      {creating && <CreateWorkflowModal onClose={() => setCreating(false)} />}
     </div>
   );
 }
 
-function StateChip({ active, onClick, label, count, toneVarName }: {
+function StateChip({
+  active,
+  onClick,
+  label,
+  count,
+  toneVarName,
+}: {
   active: boolean;
   onClick: () => void;
   label: string;
@@ -354,12 +443,22 @@ function StateChip({ active, onClick, label, count, toneVarName }: {
       type="button"
       onClick={onClick}
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
-        active ? "border-primary/40 bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
+        active
+          ? "border-primary/40 bg-primary/10 text-foreground"
+          : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
       }`}
     >
-      {toneVarName && <span className="size-1.5 rounded-full" style={{ background: toneVarName }} aria-hidden="true" />}
+      {toneVarName && (
+        <span
+          className="size-1.5 rounded-full"
+          style={{ background: toneVarName }}
+          aria-hidden="true"
+        />
+      )}
       {label}
-      {count !== undefined && <span className="font-mono tabular-nums opacity-70">{count}</span>}
+      {count !== undefined && (
+        <span className="font-mono tabular-nums opacity-70">{count}</span>
+      )}
     </button>
   );
 }

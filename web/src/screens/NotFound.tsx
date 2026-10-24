@@ -19,19 +19,30 @@ export function NotFound() {
   return (
     <div className="grid min-h-[60vh] place-items-center">
       <div className="surface-card w-full max-w-lg rounded-xl px-6 py-8 text-center">
-        <Compass className="mx-auto size-7 text-muted-foreground" aria-hidden="true" />
-        <span className="mt-3 block font-mono text-4xl leading-none font-semibold tracking-tight text-muted-foreground/70">404</span>
+        <Compass
+          className="mx-auto size-7 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <span className="mt-3 block font-mono text-4xl leading-none font-semibold tracking-tight text-muted-foreground/70">
+          404
+        </span>
         <span className="mt-3 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
           Off the ridge line
         </span>
-        <h1 className="mt-1.5 text-xl font-semibold tracking-tight text-foreground">This route doesn’t exist</h1>
+        <h1 className="mt-1.5 text-xl font-semibold tracking-tight text-foreground">
+          This route doesn’t exist
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          The cockpit exposes six views — pick one below or return to the overview.
+          The cockpit exposes six views — pick one below or return to the
+          overview.
         </p>
 
         <Separator className="my-5" />
 
-        <nav aria-label="Cockpit routes" className="flex flex-wrap justify-center gap-2">
+        <nav
+          aria-label="Cockpit routes"
+          className="flex flex-wrap justify-center gap-2"
+        >
           {ROUTES.map((r) => (
             <Link
               key={r.to}

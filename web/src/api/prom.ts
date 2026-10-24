@@ -36,7 +36,11 @@ export function parsePrometheus(text: string): MetricMap {
       const sp = rest.indexOf(" ");
       const name = rest.slice(0, sp);
       const help = rest.slice(sp + 1);
-      const fam = getOrCreate(out, { name, type: out[name]?.type ?? "untyped", help });
+      const fam = getOrCreate(out, {
+        name,
+        type: out[name]?.type ?? "untyped",
+        help,
+      });
       fam.help = help;
       continue;
     }
@@ -47,15 +51,29 @@ export function parsePrometheus(text: string): MetricMap {
     // Families are keyed by EXACT sample name: folding _sum/_count into a
     // parent would corrupt real gauges like fathom_outbox_unpublished_count.
     // No histogram is wired server-side yet (gap G5), so no folding is needed.
-    const fam = out[parsed.name] ?? getOrCreate(out, { name: parsed.name, type: pending?.name === parsed.name ? pending.type : "untyped", help: "" });
+    const fam =
+      out[parsed.name] ??
+      getOrCreate(out, {
+        name: parsed.name,
+        type: pending?.name === parsed.name ? pending.type : "untyped",
+        help: "",
+      });
     fam.samples.push(parsed);
   }
   return out;
 }
 
-function getOrCreate(map: MetricMap, meta: { name: string; type: string; help: string }): MetricFamily {
+function getOrCreate(
+  map: MetricMap,
+  meta: { name: string; type: string; help: string },
+): MetricFamily {
   if (!map[meta.name]) {
-    map[meta.name] = { name: meta.name, type: meta.type || "untyped", help: meta.help, samples: [] };
+    map[meta.name] = {
+      name: meta.name,
+      type: meta.type || "untyped",
+      help: meta.help,
+      samples: [],
+    };
   }
   return map[meta.name];
 }
@@ -130,20 +148,36 @@ export function workflowCensus(map: MetricMap): CensusRow[] {
   const fam = map["fathom_workflows_total"];
   if (!fam) return [];
   return fam.samples
-    .filter((s) => s.labels.def_name !== undefined && s.labels.state !== undefined)
-    .map((s) => ({ def_name: s.labels.def_name, state: s.labels.state, count: s.value }));
+    .filter(
+      (s) => s.labels.def_name !== undefined && s.labels.state !== undefined,
+    )
+    .map((s) => ({
+      def_name: s.labels.def_name,
+      state: s.labels.state,
+      count: s.value,
+    }));
 }
 
-export function gaugeValue(map: MetricMap, name: string, labels?: Record<string, string>): number | null {
+export function gaugeValue(
+  map: MetricMap,
+  name: string,
+  labels?: Record<string, string>,
+): number | null {
   const fam = map[name];
   if (!fam || fam.samples.length === 0) return null;
   const want = Object.entries(labels ?? {});
-  const s = fam.samples.find((sm) => want.every(([k, v]) => sm.labels[k] === v));
+  const s = fam.samples.find((sm) =>
+    want.every(([k, v]) => sm.labels[k] === v),
+  );
   return s ? s.value : null;
 }
 
 /** all samples of a family with a label split (e.g. classification bars). */
-export function byLabel(map: MetricMap, name: string, label: string): Array<{ key: string; value: number }> {
+export function byLabel(
+  map: MetricMap,
+  name: string,
+  label: string,
+): Array<{ key: string; value: number }> {
   const fam = map[name];
   if (!fam) return [];
   return fam.samples

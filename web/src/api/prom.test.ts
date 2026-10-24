@@ -30,8 +30,16 @@ describe("parsePrometheus", () => {
 
   it("captures labels and values for the census", () => {
     const census = workflowCensus(map);
-    expect(census).toContainEqual({ def_name: "booking", state: "RUNNING", count: 3 });
-    expect(census).toContainEqual({ def_name: "shipping", state: "FAILED_MANUAL", count: 1 });
+    expect(census).toContainEqual({
+      def_name: "booking",
+      state: "RUNNING",
+      count: 3,
+    });
+    expect(census).toContainEqual({
+      def_name: "shipping",
+      state: "FAILED_MANUAL",
+      count: 1,
+    });
   });
 
   it("reads an unlabelled gauge via gaugeValue", () => {
@@ -40,7 +48,11 @@ describe("parsePrometheus", () => {
   });
 
   it("splits a family by a label via byLabel, highest first", () => {
-    const rows = byLabel(map, "fathom_events_classified_total", "classification");
+    const rows = byLabel(
+      map,
+      "fathom_events_classified_total",
+      "classification",
+    );
     expect(rows).toEqual([
       { key: "APPLIED", value: 40 },
       { key: "DUPLICATE", value: 5 },
@@ -48,6 +60,8 @@ describe("parsePrometheus", () => {
   });
 
   it("preserves fractional gauge values and the relay label", () => {
-    expect(gaugeValue(map, "fathom_relay_publish_lag_seconds", { relay: "relay-a" })).toBeCloseTo(0.42);
+    expect(
+      gaugeValue(map, "fathom_relay_publish_lag_seconds", { relay: "relay-a" }),
+    ).toBeCloseTo(0.42);
   });
 });

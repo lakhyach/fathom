@@ -1,9 +1,31 @@
-/* React Flow library overrides for the Glacier Glass identity. The stock
+/* React Flow library overrides for the Verdant Frame identity. The stock
    stylesheet is imported first; these rules re-token only the pieces the
-   library paints itself (handles, edges, controls, attribution). The step node,
-   progress bar, a11y rail and attempt gantt are all Tailwind now — they live in
-   the components, not here. */
+   library paints itself (stage, handles, edges, controls, attribution). The step
+   node, progress bar, a11y rail and attempt gantt are all Tailwind now — they
+   live in the components, not here. */
 @import "@xyflow/react/dist/style.css";
+
+/* The stage is the app's signature surface: the same near-black canvas the
+   frame floats on, lit from the upper left by the reference's directional
+   green, so the chain reads as sitting in a pool of light rather than on a
+   flat void. */
+.flow-stage {
+  background:
+    radial-gradient(
+      72% 88% at 14% 0%,
+      oklch(0.52 0.13 137 / 17%),
+      transparent 62%
+    ),
+    radial-gradient(
+      48% 60% at 88% 100%,
+      oklch(0.62 0.16 133 / 8%),
+      transparent 70%
+    ),
+    var(--canvas);
+}
+.flow-stage .react-flow__viewport {
+  font-family: var(--font-sans);
+}
 
 /* Attribution stays visible: removing it requires a React Flow Pro licence the
    project does not hold. It is re-tokened into the system instead. */
@@ -13,7 +35,7 @@
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.04em;
-  opacity: 0.7;
+  opacity: 0.62;
 }
 .flow-stage .react-flow__attribution a {
   color: inherit;
@@ -32,35 +54,58 @@
 .flow-stage .react-flow__edge-path {
   stroke-linecap: round;
 }
+/* A traversed connector breathes; an unrun one stays a static hairline, so the
+   dash never implies progress the engine has not made. */
+.flow-stage .react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 7 5;
+  animation: edge-flow 1.1s linear infinite;
+}
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+/* Zoom / fit controls: one rounded pill on the system surface. */
 .flow-stage .react-flow__controls {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 24px -18px oklch(0 0 0 / 60%);
+  border-radius: 9999px;
   overflow: hidden;
+  box-shadow: var(--shadow-card);
+  background: var(--card);
 }
 .flow-stage .react-flow__controls-button {
-  width: 26px;
-  height: 26px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border-bottom: 1px solid var(--hairline);
   fill: var(--muted-foreground);
 }
+.flow-stage .react-flow__controls-button:last-child {
+  border-bottom: none;
+}
 .flow-stage .react-flow__controls-button:hover {
-  background: var(--accent);
+  background: var(--chip);
   fill: var(--foreground);
 }
 .flow-stage .react-flow__controls-button svg {
   fill: currentColor;
 }
+.flow-stage .react-flow__minimap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
 
-/* running step nodes breathe; the global reduced-motion rule in index.css stops it */
+/* Running step nodes breathe in the engine's live tone; the global
+   reduced-motion rule in index.css stops it. */
 @keyframes node-pulse {
   0%,
   100% {
-    box-shadow: 0 1px 2px oklch(0 0 0 / 0.4);
+    box-shadow: 0 0 0 0 oklch(0.83 0.115 172 / 0%);
   }
   50% {
-    box-shadow: 0 1px 2px oklch(0 0 0 / 0.4), 0 0 0 3px oklch(0.8 0.14 190 / 0.16);
+    box-shadow: 0 0 0 5px oklch(0.83 0.115 172 / 16%);
   }
 }
 .flow-node--running {

@@ -6,7 +6,12 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly problem?: Problem;
-  constructor(status: number, code: string, message: string, problem?: Problem) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    problem?: Problem,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -36,7 +41,12 @@ export class AuthError extends ApiError {
 export class RateLimitError extends ApiError {
   readonly retryAfter: number;
   constructor(retryAfter: number, problem?: Problem) {
-    super(429, "RATE_LIMITED", "Rate limited by the API; backing off.", problem);
+    super(
+      429,
+      "RATE_LIMITED",
+      "Rate limited by the API; backing off.",
+      problem,
+    );
     this.name = "RateLimitError";
     this.retryAfter = retryAfter;
   }
@@ -46,7 +56,13 @@ export class RateLimitError extends ApiError {
 export class ConflictError extends ApiError {
   readonly currentVersion?: number;
   constructor(problem?: Problem) {
-    super(409, problem?.code ?? "CONFLICT", problem?.detail ?? "The workflow advanced; retry against the current version.", problem);
+    super(
+      409,
+      problem?.code ?? "CONFLICT",
+      problem?.detail ??
+        "The workflow advanced; retry against the current version.",
+      problem,
+    );
     this.name = "ConflictError";
     this.currentVersion = problem?.version;
   }
@@ -55,7 +71,9 @@ export class ConflictError extends ApiError {
 /** Transport failure: proxy down, backend asleep, request aborted upstream. */
 export class ConnectionError extends Error {
   readonly aborted: boolean;
-  constructor(message = "Cannot reach the Nunatak API (is the control plane running?)") {
+  constructor(
+    message = "Cannot reach the Nunatak API (is the control plane running?)",
+  ) {
     super(message);
     this.name = "ConnectionError";
     this.aborted = false;

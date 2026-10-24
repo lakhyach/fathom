@@ -3,7 +3,14 @@
    loopback control plane), bearer auth, request cancellation, problem+json
    error normalisation, and rate-limit surfacing. No secrets live here:
    the key is read from settings at call time. */
-import { ApiError, AuthError, ConflictError, ConnectionError, RateLimitError, isAbort } from "./errors";
+import {
+  ApiError,
+  AuthError,
+  ConflictError,
+  ConnectionError,
+  RateLimitError,
+  isAbort,
+} from "./errors";
 import { looksLikeProblem } from "./guards";
 import type { Problem } from "./types";
 
@@ -37,14 +44,18 @@ export class NunatakClient {
     const u = new URL(path, window.location.origin);
     if (query) {
       for (const [k, v] of Object.entries(query)) {
-        if (v !== undefined && v !== null && v !== "") u.searchParams.set(k, String(v));
+        if (v !== undefined && v !== null && v !== "")
+          u.searchParams.set(k, String(v));
       }
     }
     return u.pathname + u.search;
   }
 
   async request<T>(opts: RequestOptions): Promise<T> {
-    const headers: Record<string, string> = { Accept: "application/json", ...opts.headers };
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      ...opts.headers,
+    };
     if (!opts.anonymous) {
       const key = this.cfg.getKey();
       if (key) headers["Authorization"] = `Bearer ${key}`;
@@ -68,11 +79,16 @@ export class NunatakClient {
       throw new ConnectionError();
     }
 
-    if (res.status === 401) throw new AuthError("unauthenticated", await this.tryProblem(res));
-    if (res.status === 403) throw new AuthError("forbidden", await this.tryProblem(res));
+    if (res.status === 401)
+      throw new AuthError("unauthenticated", await this.tryProblem(res));
+    if (res.status === 403)
+      throw new AuthError("forbidden", await this.tryProblem(res));
     if (res.status === 429) {
       const ra = Number.parseInt(res.headers.get("Retry-After") ?? "5", 10);
-      throw new RateLimitError(Number.isFinite(ra) ? ra : 5, await this.tryProblem(res));
+      throw new RateLimitError(
+        Number.isFinite(ra) ? ra : 5,
+        await this.tryProblem(res),
+      );
     }
 
     if (!res.ok && !opts.okStatuses?.includes(res.status)) {
