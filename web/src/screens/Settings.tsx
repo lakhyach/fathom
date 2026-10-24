@@ -50,6 +50,17 @@ export function Settings() {
         </div>
       </div>
 
+      <div className="fx-session" role="status">
+        <span className={`fx-session__role fx-session__role--${settings.key?.role ?? "none"}`}>
+          <IconKey size={12} /> {settings.key ? settings.key.role : "no key"}
+        </span>
+        <span className="fx-session__item">identity <strong>{settings.key?.label ?? "—"}</strong></span>
+        <span className="fx-session__sep" aria-hidden="true" />
+        <span className="fx-session__item">clock <strong>{settings.timeFormat === "utc" ? "UTC" : "local"}</strong></span>
+        <span className="fx-session__sep" aria-hidden="true" />
+        <span className="fx-session__item">stateless · <strong>localStorage</strong> only</span>
+      </div>
+
       <div className="fx-settings-grid">
         <Panel title={<h2>API key</h2>} kicker="Authorization: Bearer …" className="fx-rise" style={{ "--fx-rise-i": 0 } as CSSProperties}>
           <div className="fx-keyform">

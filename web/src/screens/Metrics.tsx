@@ -4,16 +4,20 @@
    sparklines or rate(Δ) curves are drawn. The raw exposition snapshot is
    listed exhaustively so an operator can always see the ground truth. */
 import { useMemo, type CSSProperties } from "react";
+import { Link } from "react-router";
 
 import { useHealthz, useMetrics, useReadyz } from "../api/hooks";
 import { byLabel, gaugeValue, workflowCensus } from "../api/prom";
-import { EmptyState, ErrorState, LoadingRows, Panel, SnapshotAt, TimeText, humanDuration } from "../components/ui";
-import { BarList, GaugeRing, StateStack, TransitionBars } from "../components/charts";
-import { IconPlug } from "../icons";
+import { EmptyState, ErrorState, KpiCard, LoadingRows, Panel, SnapshotAt, TimeText, humanDuration } from "../components/ui";
+import { BarList, Donut, GaugeRing, TransitionBars } from "../components/charts";
+import { IconAlert, IconCheck, IconDeadLetter, IconExecution, IconPlug, IconWorkflows } from "../icons";
 import type { Sample } from "../api/prom";
 import "./screens.css";
 
 const rise = (i: number) => ({ className: "fx-rise", style: { "--fx-rise-i": i } as CSSProperties });
+
+const ACTIVE = ["QUEUED", "RUNNING", "RETRY_WAITING", "COMPENSATING", "CANCELLING"];
+const NEGATIVE = ["FAILED", "ABORTED"];
 
 function fmtVal(name: string, v: number): string {
   if (name.endsWith("_age_seconds") || name.endsWith("_lag_seconds")) return humanDuration(v * 1000);
@@ -65,6 +69,11 @@ export function Metrics() {
   const dlqDepth = map ? byLabel(map, "fathom_dlq_depth", "class") : [];
   const classified = map ? byLabel(map, "fathom_events_classified_total", "classification") : [];
 
+  const active = ACTIVE.reduce((a, s) => a + (byState.get(s) ?? 0), 0);
+  const failed = NEGATIVE.reduce((a, s) => a + (byState.get(s) ?? 0), 0);
+  const completed = byState.get("COMPLETED") ?? 0;
+  const openDlq = dlqDepth.reduce((a, r) => a + r.value, 0);
+
   return (
     <div className="fx-screen">
       <div className="fx-page-head">
@@ -90,9 +99,24 @@ export function Metrics() {
 
       {map && (
         <>
+          <div className="fx-kpi">
+            <KpiCard index={0} kicker="Total workflows" value={total} sub={total > 0 ? "durable census" : "no data yet"} icon={<IconWorkflows size={16} />} tone="neutral" />
+            <KpiCard index={1} kicker="Completed" value={completed} sub="terminal · immutable" icon={<IconCheck size={16} />} tone="completed" />
+            <KpiCard index={2} kicker="Active" value={active} sub="queued · running · compensating" icon={<IconExecution size={16} />} tone="running" />
+            <KpiCard index={3} kicker="Failed / aborted" value={failed} sub="terminal · negative" icon={<IconAlert size={16} />} tone="negative" />
+            <KpiCard
+              index={4}
+              kicker="Dead letters"
+              value={openDlq}
+              sub={<Link to="/dlq">investigate →</Link>}
+              icon={<IconDeadLetter size={16} />}
+              tone="manual"
+            />
+          </div>
+
           <div className="fx-grid-2">
             <Panel {...rise(0)} title={<h2>Workflow census</h2>} kicker="fathom_workflows_total">
-              <StateStack slices={slices} total={total} />
+              <Donut slices={slices} total={total} />
             </Panel>
             <Panel {...rise(1)} title={<h2>Transitions</h2>} kicker="fathom_workflow_transitions_total · by edge">
               <TransitionBars rows={transitions} />

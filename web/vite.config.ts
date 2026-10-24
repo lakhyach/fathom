@@ -18,7 +18,20 @@ export default defineConfig({
       "/v1": { target: BACKEND, changeOrigin: false },
       "/healthz": { target: BACKEND, changeOrigin: false },
       "/readyz": { target: BACKEND, changeOrigin: false },
-      "/metrics": { target: BACKEND, changeOrigin: false },
+      "/metrics": {
+        target: BACKEND,
+        changeOrigin: false,
+        // The SPA route "/metrics" (Metrics & Health screen) collides with the
+        // backend's Prometheus scrape path. A top-level browser navigation or
+        // refresh sends Accept: text/html — serve the app shell so the screen
+        // renders; the cockpit's own data fetch sends Accept: */* and is proxied
+        // to the backend exactly as before. Without this, deep-linking or
+        // refreshing /metrics returned raw exposition text instead of the app.
+        bypass(req) {
+          if (req.headers.accept?.includes("text/html")) return "/index.html";
+          return null;
+        },
+      },
     },
   },
   test: {

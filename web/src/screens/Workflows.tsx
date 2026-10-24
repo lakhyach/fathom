@@ -7,8 +7,9 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
-import { useWorkflows } from "../api/hooks";
-import { WORKFLOW_STATES, workflowStatus } from "../theme/status";
+import { useMetrics, useWorkflows } from "../api/hooks";
+import { workflowCensus } from "../api/prom";
+import { WORKFLOW_STATES, toneVar, workflowStatus } from "../theme/status";
 import {
   CopyChip,
   EmptyState,
@@ -57,6 +58,16 @@ export function Workflows() {
   );
 
   const list = useWorkflows(query);
+
+  // durable per-state distribution from the engine's own census — annotates the
+  // filter chips so the bar doubles as an at-a-glance ledger breakdown.
+  const metrics = useMetrics();
+  const countByState = useMemo(() => {
+    const m = new Map<string, number>();
+    if (metrics.data) for (const r of workflowCensus(metrics.data)) m.set(r.state, (m.get(r.state) ?? 0) + r.count);
+    return m;
+  }, [metrics.data]);
+  const censusTotal = [...countByState.values()].reduce((a, b) => a + b, 0);
 
   const applyKeyFilter = (value: string) => {
     const next = new URLSearchParams(params);
@@ -120,13 +131,23 @@ export function Workflows() {
         <div className="fx-filters__chips" role="group" aria-label="Filter by state">
           <button type="button" className={`fx-chip ${state === "" ? "fx-chip--on" : ""}`} onClick={() => pickState("")}>
             All states
+            {censusTotal > 0 && <span className="fx-chip__n num">{censusTotal}</span>}
           </button>
-          {WORKFLOW_STATES.map((s) => (
-            <button key={s} type="button" className={`fx-chip ${state === s ? "fx-chip--on" : ""}`} onClick={() => pickState(s)}>
-              <span className={`fx-dot fx-dot--${workflowStatus(s).tone}`} aria-hidden="true" />
-              {workflowStatus(s).label}
-            </button>
-          ))}
+          {WORKFLOW_STATES.map((s) => {
+            const n = countByState.get(s) ?? 0;
+            return (
+              <button
+                key={s}
+                type="button"
+                className={`fx-chip fx-chip--state${n === 0 ? " fx-chip--empty" : ""} ${state === s ? "fx-chip--on" : ""}`}
+                onClick={() => pickState(s)}
+              >
+                <span className={`fx-dot fx-dot--${workflowStatus(s).tone}`} aria-hidden="true" />
+                {workflowStatus(s).label}
+                {n > 0 && <span className="fx-chip__n num">{n}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -165,7 +186,8 @@ export function Workflows() {
               {list.data!.items.map((w) => (
                 <tr
                   key={w.id}
-                  className="fx-link-row"
+                  className="fx-link-row fx-row"
+                  style={{ "--fx-row-tone": toneVar(workflowStatus(w.state).tone) } as CSSProperties}
                   onClick={() => navigate(`/workflows/${w.id}`)}
                 >
                   <td>

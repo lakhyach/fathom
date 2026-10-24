@@ -101,6 +101,19 @@ export function WorkflowDetail() {
     [base, selected],
   );
 
+  // selection spotlight: when a step is chosen, its incident connectors stay lit
+  // and every other edge recedes — reinforces the node↔edge↔rail selection sync
+  // without inventing traversal (only emphasising edges the engine really drew).
+  const edges = useMemo(
+    () =>
+      base.edges.map((e) => {
+        if (!selected) return e;
+        const incident = e.source === selected || e.target === selected;
+        return { ...e, style: { ...e.style, opacity: incident ? 1 : 0.25 } };
+      }),
+    [base, selected],
+  );
+
   const pickStep = (stepType: string) => {
     setSelected((cur) => (cur === stepType ? null : stepType));
     setTab("flow");
@@ -135,7 +148,7 @@ export function WorkflowDetail() {
             <div className="fx-insp-main">
               <GraphPanel
                 nodes={nodes}
-                edges={base.edges}
+                edges={edges}
                 steps={steps}
                 wf={wf.data}
                 updatedAt={wf.dataUpdatedAt}

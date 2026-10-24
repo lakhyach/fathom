@@ -8,7 +8,8 @@
 import { useState, type CSSProperties } from "react";
 import { Link } from "react-router";
 
-import { useDlq, useResolveDlq } from "../api/hooks";
+import { useDlq, useMetrics, useResolveDlq } from "../api/hooks";
+import { byLabel, gaugeValue } from "../api/prom";
 import { useSettings } from "../state/settings";
 import { workflowStatus } from "../theme/status";
 import {
@@ -22,6 +23,7 @@ import {
   SnapshotAt,
   StatusBadge,
   TimeText,
+  humanDuration,
   truncate,
   useCursorStack,
   useToast,
@@ -50,6 +52,14 @@ export function Dlq() {
   const [confirming, setConfirming] = useState<{ item: DeadLetter; action: Action } | null>(null);
 
   const items = dlq.data?.items ?? [];
+
+  // durable, engine-authoritative queue signal (not just this page) so the
+  // investigation header reflects the real backlog at a glance.
+  const metrics = useMetrics();
+  const dlqTotal = metrics.data ? byLabel(metrics.data, "fathom_dlq_depth", "class").reduce((a, r) => a + r.value, 0) : null;
+  const oldestDlq = metrics.data ? gaugeValue(metrics.data, "fathom_dlq_oldest_age_seconds") : null;
+  const openHere = items.filter((d) => !d.resolved_at).length;
+  const resolvedHere = items.filter((d) => d.resolved_at).length;
 
   return (
     <div className="fx-screen">
@@ -112,12 +122,27 @@ export function Dlq() {
       )}
 
       {dlq.data && items.length > 0 && (
-        <div className="fx-dlq-summary" role="status">
-          <span><b>{items.filter((d) => !d.resolved_at).length}</b> unresolved</span>
-          <span className="sep" aria-hidden="true" />
-          <span><b>{items.filter((d) => d.resolved_at).length}</b> resolved</span>
-          <span className="sep" aria-hidden="true" />
-          <span>{openOnly ? "open queue" : "all states"} · page {pages.depth + 1}</span>
+        <div className="fx-dlq-stats" role="status">
+          <div className="fx-dlq-stat fx-dlq-stat--manual">
+            <span className="fx-dlq-stat__k">Awaiting decision</span>
+            <span className="fx-dlq-stat__v num">{openHere}</span>
+            <span className="fx-dlq-stat__s">open on this page</span>
+          </div>
+          <div className="fx-dlq-stat fx-dlq-stat--resolved">
+            <span className="fx-dlq-stat__k">Resolved</span>
+            <span className="fx-dlq-stat__v num">{resolvedHere}</span>
+            <span className="fx-dlq-stat__s">{openOnly ? "hidden by open filter" : "on this page"}</span>
+          </div>
+          <div className="fx-dlq-stat">
+            <span className="fx-dlq-stat__k">Queue depth</span>
+            <span className="fx-dlq-stat__v num">{dlqTotal ?? "—"}</span>
+            <span className="fx-dlq-stat__s">durable · all classes</span>
+          </div>
+          <div className="fx-dlq-stat">
+            <span className="fx-dlq-stat__k">Oldest open</span>
+            <span className="fx-dlq-stat__v">{oldestDlq != null ? humanDuration(oldestDlq * 1000) : "—"}</span>
+            <span className="fx-dlq-stat__s">page {pages.depth + 1}</span>
+          </div>
         </div>
       )}
 

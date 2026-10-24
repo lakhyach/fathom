@@ -18,6 +18,8 @@
 }
 .fx-graph .react-flow__edge-path {
   stroke-linecap: round;
+  transition: stroke var(--fx-dur) var(--fx-ease), opacity var(--fx-dur) var(--fx-ease),
+    stroke-width var(--fx-dur) var(--fx-ease);
 }
 .fx-graph .react-flow__attribution {
   display: none;
