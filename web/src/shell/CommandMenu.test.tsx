@@ -57,9 +57,13 @@ describe("CommandMenu", () => {
         <CommandMenu open onClose={vi.fn()} onNewWorkflow={vi.fn()} />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole("option", { name: /Dead Letter/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("option", { name: /Dead Letter/i }),
+    ).toBeInTheDocument();
     // fixtures come from the (mocked) real list query, not hard-coded markup
-    expect(screen.getByRole("option", { name: /echo-single/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /echo-single/i }),
+    ).toBeInTheDocument();
   });
 
   it("closes and navigates to a route when a Navigate item is chosen", async () => {
@@ -87,9 +91,13 @@ describe("CommandMenu", () => {
         <CommandMenu open onClose={vi.fn()} onNewWorkflow={vi.fn()} />
       </MemoryRouter>,
     );
-    const item = await screen.findByRole("option", { name: /echo-compensate/i });
+    const item = await screen.findByRole("option", {
+      name: /echo-compensate/i,
+    });
     await userEvent.click(item);
-    expect(screen.getByTestId("path")).toHaveTextContent("/workflows/01a169e6-43f3-7d7f-97a0-df4d977e4bfc");
+    expect(screen.getByTestId("path")).toHaveTextContent(
+      "/workflows/01a169e6-43f3-7d7f-97a0-df4d977e4bfc",
+    );
   });
 
   it("invokes the real New-workflow action without navigating", async () => {

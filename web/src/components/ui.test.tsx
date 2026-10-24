@@ -8,14 +8,20 @@ describe("StatusBadge", () => {
   it("renders the human label and a tone class — colour plus text, never colour alone", () => {
     render(<StatusBadge state="COMPENSATING" />);
     expect(screen.getByText("Compensating")).toBeInTheDocument();
-    const badge = document.querySelector('[data-slot="badge"][data-tone="compensating"]');
+    const badge = document.querySelector(
+      '[data-slot="badge"][data-tone="compensating"]',
+    );
     expect(badge).not.toBeNull();
-    /* Hue lives in the ring, the tint and the dot; the label stays frost so it
-       clears AA against its own 10% tint. */
-    expect(badge?.className).toContain("border-st-compensating/35");
-    expect(badge?.className).toContain("bg-st-compensating/10");
-    expect(badge?.className).toContain("text-foreground");
-    expect(badge?.querySelector('[aria-hidden="true"].bg-st-compensating')).not.toBeNull();
+    /* Phase 8 "Verdant Frame": the --st-* ramp carries both the graphic and the
+       text role, so ring, tint and label all wear the same hue. Alpha is tuning,
+       so only the tone is pinned here; the ramp was measured to clear AA as text
+       on its own 12% tint, and the label never relies on hue alone. */
+    expect(badge?.className).toContain("border-st-compensating");
+    expect(badge?.className).toContain("bg-st-compensating");
+    expect(badge?.className).toContain("text-st-compensating");
+    expect(
+      badge?.querySelector('[aria-hidden="true"].bg-st-compensating'),
+    ).not.toBeNull();
   });
 
   it("shows an accessible alert marker on FAILED_MANUAL", () => {
@@ -36,20 +42,28 @@ describe("StatusBadge", () => {
 describe("ErrorState", () => {
   it("tells an unauthenticated operator to present a key", () => {
     render(<ErrorState error={new AuthError("unauthenticated")} />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Authentication required");
-    expect(screen.getByText("Open Settings and present an API key.")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Authentication required",
+    );
+    expect(
+      screen.getByText("Open Settings and present an API key."),
+    ).toBeInTheDocument();
   });
 
   it("names the role gap instead of the key when the server answered 403", () => {
     render(<ErrorState error={new AuthError("forbidden")} />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Not permitted for this key");
-    expect(screen.getByText(/role on your presented key does not allow this verb/)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Not permitted for this key",
+    );
+    expect(
+      screen.getByText(/role on your presented key does not allow this verb/),
+    ).toBeInTheDocument();
   });
 
   it("renders a transport failure as degraded, not as an API error", () => {
     render(<ErrorState error={new ConnectionError("Failed to fetch")} />);
     const box = screen.getByRole("alert");
     expect(box).toHaveTextContent("Disconnected");
-    expect(box.className).toContain("border-st-warn/40");
+    expect(box.className).toContain("border-st-warn");
   });
 });

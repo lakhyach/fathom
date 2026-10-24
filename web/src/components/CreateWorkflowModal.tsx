@@ -63,7 +63,11 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
   }, [inputText]);
 
   const canSubmit =
-    !!chosen && bizKey.trim().length > 0 && inputValid && deadline.length > 0 && !create.isPending;
+    !!chosen &&
+    bizKey.trim().length > 0 &&
+    inputValid &&
+    deadline.length > 0 &&
+    !create.isPending;
 
   const submit = () => {
     if (!chosen) return;
@@ -94,7 +98,12 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" type="button" onClick={onClose} disabled={create.isPending}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={onClose}
+            disabled={create.isPending}
+          >
             Cancel
           </Button>
           <Button type="button" disabled={!canSubmit} onClick={submit}>
@@ -106,10 +115,14 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
       <div className="space-y-4">
         {settings.key?.role === "reader" && (
           <p className="flex items-start gap-2 rounded-lg border border-st-warn/40 bg-st-warn/5 px-3 py-2 text-xs text-st-warn">
-            <ShieldAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <ShieldAlert
+              className="mt-0.5 size-3.5 shrink-0"
+              aria-hidden="true"
+            />
             <span>
-              Your presented key is role <strong className="font-medium">reader</strong> — the API will answer 403.
-              An operator key is required.
+              Your presented key is role{" "}
+              <strong className="font-medium">reader</strong> — the API will
+              answer 403. An operator key is required.
             </span>
           </p>
         )}
@@ -118,8 +131,10 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
         {defs.isError && <ErrorState error={defs.error} />}
         {!defs.isLoading && !defs.isError && active.length === 0 && (
           <p className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-            No <strong className="font-medium text-foreground">ACTIVE</strong> definitions are registered. Ask an admin to
-            register one on Settings → Definitions (or <code className="font-mono">POST /v1/definitions</code>).
+            No <strong className="font-medium text-foreground">ACTIVE</strong>{" "}
+            definitions are registered. Ask an admin to register one on Settings
+            → Definitions (or{" "}
+            <code className="font-mono">POST /v1/definitions</code>).
           </p>
         )}
 
@@ -133,7 +148,10 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
                 </SelectTrigger>
                 <SelectContent>
                   {active.map((d) => (
-                    <SelectItem key={`${d.name}@${d.version}`} value={`${d.name}@${d.version}`}>
+                    <SelectItem
+                      key={`${d.name}@${d.version}`}
+                      value={`${d.name}@${d.version}`}
+                    >
                       {d.name} @ v{d.version} · {d.steps.length} steps
                     </SelectItem>
                   ))}
@@ -141,7 +159,9 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
               </Select>
               {chosen && (
                 <span className="block text-xs text-muted-foreground">
-                  {chosen.steps.length} step{chosen.steps.length === 1 ? "" : "s"} · immutable definition v{chosen.version}
+                  {chosen.steps.length} step
+                  {chosen.steps.length === 1 ? "" : "s"} · immutable definition
+                  v{chosen.version}
                 </span>
               )}
             </div>
@@ -156,14 +176,18 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
                 maxLength={128}
               />
               <span className="block text-xs text-muted-foreground">
-                One active workflow per key — a duplicate answers 409 while the first is still running.
+                One active workflow per key — a duplicate answers 409 while the
+                first is still running.
               </span>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="cw-input" className="flex items-center gap-1.5">
                 Instance input (JSON object)
-                <Braces className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                <Braces
+                  className="size-3.5 text-muted-foreground"
+                  aria-hidden="true"
+                />
               </Label>
               <Textarea
                 id="cw-input"
@@ -176,7 +200,11 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
                 aria-describedby={inputValid ? undefined : "cw-input-err"}
               />
               {!inputValid && (
-                <span id="cw-input-err" role="alert" className="block text-xs text-st-negative">
+                <span
+                  id="cw-input-err"
+                  role="alert"
+                  className="block text-xs text-st-negative"
+                >
                   Must be a valid JSON object.
                 </span>
               )}
@@ -192,17 +220,22 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setDeadline(e.target.value)}
               />
               <span className="block text-xs text-muted-foreground">
-                Required, and must be in the future — the engine cancels the workflow if it has not finished by this
-                instant. Idempotency key <code className="font-mono">{idemKey.slice(0, 13)}…</code> is fixed for this dialog.
+                Required, and must be in the future — the engine cancels the
+                workflow if it has not finished by this instant. Idempotency key{" "}
+                <code className="font-mono">{idemKey.slice(0, 13)}…</code> is
+                fixed for this dialog.
               </span>
             </div>
 
             {err && (
               <div className="space-y-1.5">
                 <ErrorState error={create.error} />
-                {err.kind === "conflict" && err.currentVersion !== undefined && (
-                  <span className="block text-xs text-muted-foreground">current version: {err.currentVersion}</span>
-                )}
+                {err.kind === "conflict" &&
+                  err.currentVersion !== undefined && (
+                    <span className="block text-xs text-muted-foreground">
+                      current version: {err.currentVersion}
+                    </span>
+                  )}
               </div>
             )}
           </div>

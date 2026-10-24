@@ -18,7 +18,9 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const endpoints = useMemo(() => {
     // Rebuilt when the key changes; the getter reads the current token so a
     // long-lived query never caches a stale credential.
-    const client = new NunatakClient({ getKey: () => settings.key?.token ?? null });
+    const client = new NunatakClient({
+      getKey: () => settings.key?.token ?? null,
+    });
     return new Endpoints(client);
   }, [settings.key?.token]);
 
@@ -31,12 +33,18 @@ export function ApiProvider({ children }: { children: ReactNode }) {
             refetchOnWindowFocus: false,
             retry: (failureCount, err) => {
               if (err instanceof RateLimitError) return failureCount < 2;
-              if (err instanceof Error && (err.name === "ApiError" || err.name === "AuthError")) return false;
+              if (
+                err instanceof Error &&
+                (err.name === "ApiError" || err.name === "AuthError")
+              )
+                return false;
               if (err.name === "AbortError") return false;
               return failureCount < 1; // connection blip: one retry, then show disconnected state
             },
             retryDelay: (attempt, err) =>
-              err instanceof RateLimitError ? err.retryAfter * 1000 : Math.min(1000 * 2 ** attempt, 4000),
+              err instanceof RateLimitError
+                ? err.retryAfter * 1000
+                : Math.min(1000 * 2 ** attempt, 4000),
           },
           mutations: { retry: 0 },
         },

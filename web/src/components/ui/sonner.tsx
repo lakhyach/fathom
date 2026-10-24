@@ -4,10 +4,10 @@ import {
   Loader2Icon,
   OctagonXIcon,
   TriangleAlertIcon,
-} from "lucide-react"
-import { Toaster as Sonner, type ToasterProps } from "sonner"
+} from "lucide-react";
+import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-// Dark-only cockpit: no theme library; Glacier tokens drive the toast surface.
+// Dark-only cockpit: no theme library; the Phase 8 frame tokens drive the toast surface.
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
@@ -25,12 +25,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          "--border-radius": "16px",
         } as React.CSSProperties
       }
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster }
+export { Toaster };

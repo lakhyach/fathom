@@ -4,7 +4,15 @@
    documented local-dev boundary — the API itself refuses non-loopback binds
    (api.LoopbackOnly), and cockpit session/CSRF auth is a later backend phase
    (ADR-013), so the browser-held key is the honest current model. */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type Role = "reader" | "operator" | "admin";
 export type TimeFormat = "utc" | "local";
@@ -49,10 +57,12 @@ export function parseKeySpec(spec: string): KeyInfo | null {
   if (parts.length === 3) {
     const [label, role, token] = parts;
     const valid = role === "reader" || role === "operator" || role === "admin";
-    if (label && token) return { label, role: valid ? (role as Role) : null, token };
+    if (label && token)
+      return { label, role: valid ? (role as Role) : null, token };
     return null;
   }
-  if (parts.length === 1 && s.length >= 8) return { label: "key", role: null, token: s };
+  if (parts.length === 1 && s.length >= 8)
+    return { label: "key", role: null, token: s };
   return null;
 }
 
@@ -82,8 +92,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
-  const clearKey = useCallback(() => setState((s) => ({ ...s, keySpec: "" })), []);
-  const setTimeFormat = useCallback((f: TimeFormat) => setState((s) => ({ ...s, timeFormat: f })), []);
+  const clearKey = useCallback(
+    () => setState((s) => ({ ...s, keySpec: "" })),
+    [],
+  );
+  const setTimeFormat = useCallback(
+    (f: TimeFormat) => setState((s) => ({ ...s, timeFormat: f })),
+    [],
+  );
 
   const value = useMemo<SettingsValue>(
     () => ({
