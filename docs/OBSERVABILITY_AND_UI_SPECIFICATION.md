@@ -51,6 +51,17 @@ Routes (SPA, RBAC-aware): `/` Overview · `/workflows` List+search · `/workflow
 
 Dark, quiet, technical-premium: near-black surfaces (`oklch` palette, 2 accent hues — one semantic status set, one interactive), Inter + one mono (JetBrains Mono) for envelopes/IDs, 1px borders, hairline dividers, generous density; motion only for state changes that came from data (transition flashes keyed to `audit_event.seq`). Explicit anti-references: default admin-dashboard templates (bootstrap-purple gradients, card shadows everywhere, sparkline decoration), "hacker terminal" cosplay. Status colour system is one place in code (`tokens/status.ts`): `COMPLETED` teal, `RUNNING/COMPENSATING` amber, terminal-negative rose, `FAILED_MANUAL` red with persistent icon — colour-blind-safe pairing with text badges, never colour alone.
 
+> **Phase 7 addendum (2026-10-24) — the design system behind this paragraph was
+> replaced.** The direction above still holds; its implementation does not. The
+> cockpit now renders on **Glacier Glass**: Tailwind v4 `@theme` tokens in
+> `web/src/index.css` (oklch, `--st-*` engine-state semantics), Geist / Geist Mono
+> in place of Inter + JetBrains Mono + Space Grotesk, shadcn/ui (Radix) primitives
+> in `web/src/components/ui/`, Lucide icons, Recharts for every chart, React Flow
+> for the execution graph and TanStack Table for the ledger. The retired `fx-*`
+> global stylesheets and the hand-drawn icon set are deleted, not overridden.
+> `docs/PHASE_7_DESIGN_SYSTEM_REPLACEMENT_REPORT.md` carries the migration map and
+> the per-route verification evidence.
+
 ## 5. Frontend engineering contract
 
 - Vite 8 + React 19 + TS (pinned per ADR-014); TanStack Query server-state only, no client cache of engine state beyond the query cache; SSE hook (`useFathomStream`) manages reconnect/backfill per DATA doc §C (its acceptance is RT-06).

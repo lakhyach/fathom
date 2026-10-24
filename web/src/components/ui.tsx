@@ -1,7 +1,6 @@
-/* Nunatak shared kit — Phase 7 rebuild on the Glacier Glass system.
-   Same public API as the retired fx-* kit so every screen keeps compiling
-   while it is rebuilt route by route; the internals are now Tailwind tokens,
-   shadcn/ui primitives (Radix), Lucide icons and sonner toasts.
+/* Nunatak shared kit — the Glacier Glass system's only component layer.
+   Built on Tailwind v4 tokens, shadcn/ui primitives (Radix), Lucide icons and
+   sonner toasts; the fx-* stylesheet it replaced is deleted.
    Every control is a real semantic element; every badge pairs colour with
    text; every list has honest loading/empty/error/disconnected states. */
 import {
@@ -32,10 +31,6 @@ import { describeError } from "../api/hooks";
 import { AuthError, ConnectionError } from "../api/errors";
 import { classificationStatus, stepStatus, workflowStatus, type StatusMeta, type StatusTone } from "../theme/status";
 import { useSettings } from "../state/settings";
-/* MIGRATION(M7): only the rebuilt Shell/palette have left ui.css; every legacy
-   screen still styles its own markup with .btn/.input/.field/.kicker/.mono from
-   ui.css + screens.css. This import retires with those files in M7. */
-import "./ui.css";
 
 /* ------------------------------ tone vocabulary ---------------------------- */
 

@@ -33,7 +33,7 @@ cmd/fathom/    ONE binary, modes: control | worker | relay | all       (Phase 5)
 internal/      engine, store, worker, scheduler, relay, api, health, metrics, tracing (Phase 5)
 db/            embedded versioned migrations 0001–0002                 (Phase 4–5)
 deploy/        docker compose smoke (Kafka+Debezium CDC proof)         (Phase 3)
-web/           operations cockpit (React SPA) — Vite + React 19 + React Flow   (Phases 6 & 6.1)
+web/           operations cockpit (React SPA) — Vite + React 19 + Tailwind v4 + shadcn/ui + React Flow   (Phases 6 → 7)
 tools/         separate module: CGO portability probe + franz-go round-trip smoke
 .github/workflows/  ci.yml + cdc-integration.yml (authored; run once a remote exists)
 ```

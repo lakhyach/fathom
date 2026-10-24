@@ -1,126 +1,113 @@
-# Asset Attribution — Phase 6.1 Visual Redesign
+# Asset Attribution — Nunatak cockpit
 
-Every non-code visual asset shipped in the Nunatak cockpit, its origin, licence,
-and how it is loaded. Reviewed 2026-10-23 against the working tree at baseline
-commit `20a1e5c` (Phase 6).
+Every non-code visual asset shipped in the cockpit, its origin, licence, and how
+it is loaded. Reviewed 2026-10-24 against the Phase 7 working tree (design system
+**Glacier Glass**). Sections marked *changed in Phase 7* describe what the
+replacement removed; the Phase 6.x reports remain the historical record.
 
-Design rule followed throughout (§4/§5/§11 of the brief): **no runtime external
-dependency**. Fonts and artwork are bundled into the build and served from the
-same origin. No third-party photography is hotlinked or downloaded.
+Design rule followed throughout: **no runtime external dependency**. Fonts and
+artwork are bundled into the build and served from the same origin. No
+third-party photography is hotlinked or downloaded.
 
 ---
 
-## 1. Typography (self-hosted, SIL Open Font License 1.1)
+## 1. Typography (self-hosted, SIL Open Font License 1.1) — *changed in Phase 7*
 
-All three families are bundled at build time through Fontsource's variable
-packages. They are emitted into `web/dist/assets/*.woff2` and referenced by the
-app's own stylesheet — there is no `<link>` to Google Fonts or any other remote
-foundry, and no network request for a font at runtime.
+Both families are bundled at build time through Fontsource's variable packages.
+They are emitted into `web/dist/assets/*.woff2` and referenced by the app's own
+stylesheet — there is no `<link>` to Google Fonts or any other remote foundry,
+and no network request for a font at runtime.
 
 | Family | Role | Package (pinned) | Licence | Redistribution |
 | --- | --- | --- | --- | --- |
-| Inter Variable | UI / body text | `@fontsource-variable/inter@^5.2.0` | SIL OFL 1.1 | Permitted (bundled) |
-| JetBrains Mono Variable | Numerals, IDs, code | `@fontsource-variable/jetbrains-mono@^5.2.0` | SIL OFL 1.1 | Permitted (bundled) |
-| Space Grotesk Variable | Display / headings / wordmark | `@fontsource-variable/space-grotesk@^5.3.0` | SIL OFL 1.1 | Permitted (bundled) |
+| Geist Variable | UI / body / display text | `@fontsource-variable/geist@^5.3.0` | SIL OFL 1.1 | Permitted (bundled) |
+| Geist Mono Variable | Numerals, IDs, code, timestamps | `@fontsource-variable/geist-mono@^5.3.0` | SIL OFL 1.1 | Permitted (bundled) |
 
-Space Grotesk is **new in Phase 6.1**; Inter and JetBrains Mono were already in
-use from Phase 6. The OFL permits bundling and redistribution in a compiled
-work provided the fonts are not sold on their own and the licence is retained;
-Fontsource ships the licence alongside each package.
+The OFL permits bundling and redistribution in a compiled work provided the
+fonts are not sold on their own and the licence is retained; Fontsource ships the
+licence alongside each package.
 
-Import site: `web/src/main.tsx` (`@fontsource-variable/{inter,jetbrains-mono,space-grotesk}`).
-Token bindings: `web/src/theme/tokens.css` (`--fx-font-display`, `--fx-font-ui`, `--fx-font-mono`).
+Import site: `web/src/main.tsx` (`@fontsource-variable/geist`,
+`@fontsource-variable/geist-mono`). Token bindings: `web/src/index.css`
+(`--font-sans`, `--font-mono` inside Tailwind v4 `@theme inline`), consumed as the
+`font-sans` / `font-mono` utilities.
+
+**Retired in Phase 7:** Inter, JetBrains Mono and Space Grotesk (the Phase 6.x
+type stack). They had no remaining importer once the `fx-*` layer was deleted, so
+the three `@fontsource-variable/*` packages were removed from `package.json`
+rather than left as dead weight.
 
 ## 2. Bespoke vector artwork (original — authored for this project)
 
-Both marks were drawn from scratch as SVG in this repository. They contain no
-traced, stock, emoji, or Unicode-glyph source; they are original geometric
-vector shapes owned by the project.
-
 ### `web/public/nunatak.svg` — favicon / app icon
-- **Origin:** original, hand-authored (Phase 6.1).
-- **Design:** a "peak-as-graph" mark — a summit whose three ridge vertices are
-  flow nodes — on a rounded midnight tile, stroked with the blue→violet accent
-  ramp. Reads crisply at 16/32/48 px.
+- **Origin:** original, hand-authored (Phase 6.1, refined in Phase 6.2).
+- **Design:** an orchestration glyph — a diamond whose four summit/base/left/right
+  vertices are nodes, linked by edges to a distinct hollow central **core** node.
+  `viewBox="0 0 32 32"`; renders crisply at 16/32/48 px.
 - **Licence:** project-owned; no third-party source.
-- **Load:** `/nunatak.svg` (favicon + same-origin, no network hop).
+- **Load:** `/nunatak.svg` referenced from `web/index.html` (favicon, same-origin,
+  no network hop). The in-app brand mark (`NunatakMark`, `web/src/components/brand.tsx`)
+  is inline SVG on the same geometry, drawn with currentColor so it follows tokens.
+- **Phase 7 note:** the accent ramp on the favicon is the old blue→violet. It is
+  kept deliberately — it is the product's identity mark, not part of the retired
+  surface system, and re-cutting it would be a rebrand the brief did not ask for.
 
-### `web/public/alpine.svg` — sidebar artwork
-- **Origin:** original, hand-authored layered SVG (Phase 6.1). **240×520.**
-- **Design:** a night alpine scene built from pure vector primitives — a sky
-  gradient, an aurora band, a handful of stars, three layered ridges (far /
-  mid / near) with gradient rim-light and snow caps, and a valley-fog fade into
-  the sidebar base colour so it dissolves into the chrome.
-- **Licence:** project-owned; no third-party source.
-- **Load:** referenced as a `background-image` on the nav rail
-  (`web/src/shell/shell.css`), `bottom center / cover`, pinned to the rail base.
-- **Documented deviation (§4):** the brief suggested searching for a high-quality
-  abstract alpine *photograph*, inspecting its licence, downloading it into
-  public assets, and optimising it. Two constraints made an original SVG the
-  better honest choice: (a) the tooling here must not download binaries over the
-  network (wget/curl), and (b) any third-party photo would carry an external
-  licence/attribution chain that cannot be verified to the standard the rest of
-  this file holds. A bespoke vector is fully owned, licence-clean, crisp at every
-  DPR, and a few hundred bytes. It is atmospheric rather than photographic, which
-  still satisfies the "dark enough for nav, blue-violet highlights, minimal
-  silhouettes, fading into the sidebar" intent.
-- **Accessibility / motion:** the artwork is purely decorative; it sits behind the
-  nav column (readable contrast is guaranteed by the scrim gradient overlay in
-  `shell.css`, not by the image). Any parallax is intentionally omitted, so
-  nothing here needs a reduced-motion gate; the global
-  `prefers-reduced-motion` rule in `tokens.css` already neutralises all durations.
+### `web/public/alpine.svg` — **removed in Phase 7**
+The Phase 6 sidebar backdrop (an original 240×520 layered vector night range) was
+deleted with `web/src/shell/shell.css`, the only file that referenced it as a
+`background-image`. Glacier Glass builds the rail from token-driven surfaces
+(`@utility surface-veil`), so no artwork sits behind the navigation and label
+contrast no longer depends on a scrim over an image. The asset had zero remaining
+importers; the licence question is therefore moot, and the file is gone rather
+than orphaned in `public/`.
 
-## 2a. Phase 6.2 revision — same two vectors, higher fidelity
-
-Phase 6.2 (reference-locked visual-fidelity correction) **revised the two existing
-bespoke vectors in place**. No asset was added, downloaded, hotlinked, or
-re-licensed: both remain original, project-owned SVG authored in this repository,
-so the licence posture in §2 is unchanged and no new attribution chain is
-introduced. Concretely:
-
-- **`web/public/alpine.svg`** was rebuilt from the earlier three-ridge schematic
-  into a **cinematic four-plane layered range** (`far → back → mid → near`), each
-  with its own depth gradient, a blue-violet `rim` light stroked down the lit
-  faces, snow caps, a `fog` band behind the mid range, a blurred valley-fog pool
-  and a soft gaussian `filter`, an aurora band + hazeglow behind the farthest
-  peaks, and a `basefade` that dissolves the scene into the rail. It still
-  `viewBox="0 0 240 520"`, still loads same-origin as the nav-rail
-  `background-image`, and is still purely decorative (contrast for the nav labels
-  comes from the scrim in `shell.css`, not the artwork).
-- **`web/public/nunatak.svg`** was refined from the plain peak mark into an
-  **orchestration glyph**: a diamond whose four summit/base/left/right vertices
-  are nodes, linked by edges to a distinct hollow central **core** node — a clear
-  connection/orchestration metaphor — on the same rounded midnight tile with the
-  blue→violet accent ramp. It stays `viewBox="0 0 32 32"` and renders crisply at
-  16/32/48 px for the favicon.
-
-Everything else in this file (fonts §1, iconography §3, libraries §4, naming §5)
-is untouched by Phase 6.2.
-
-## 3. Iconography
-- **Origin:** original inline SVG components in `web/src/icons/index.tsx` —
-  hand-drawn on a 24 px grid, 1.5 px stroke, round caps; the brand `NunatakMark`
-  on a 32 px grid. No icon library (no Lucide/Feather/Heroicons) is imported.
-- **Licence:** project-owned. Rendered as inline `<svg>` (aria-hidden by default;
-  the surrounding control carries the accessible name).
+## 3. Iconography — *changed in Phase 7*
+- **Origin:** [Lucide](https://lucide.dev) (`lucide-react@^1.61.0`), ISC licence —
+  an open-source icon set of ~1.5k SVG components on a 24 px grid, 2 px stroke,
+  round caps. Ships as inline `<svg>` React components.
+- **Use:** every glyph in the cockpit (nav, status affordances, buttons, empty and
+  error states, the command palette, graph nodes). Decorative instances are
+  `aria-hidden="true"` and the surrounding control carries the accessible name.
+- **Sizing/colour** is set with Tailwind utilities (`size-*`, `text-*`), so icons
+  follow the same tokens as the rest of the system.
+- **Retired in Phase 7:** the hand-drawn set in `web/src/icons/index.tsx`. Keeping
+  two icon systems would have meant two stroke weights and two grids on screen at
+  once; the custom set had no licence or attribution obligation, so removal is a
+  consistency decision, not a compliance one.
+- The brand `NunatakMark` remains original inline SVG (§2) and is not part of
+  either icon set.
 
 ## 4. Third-party runtime libraries (for completeness)
-These are code dependencies that affect the visual surface, not "assets", listed
-for a full audit trail:
+Code dependencies that shape the visual surface, listed for a full audit trail:
 
 | Library | Pinned | Licence | Note |
 | --- | --- | --- | --- |
-| `@xyflow/react` (React Flow) | 12.12.0 | MIT | The execution graph. |
+| `@xyflow/react` (React Flow) | 12.12.0 | MIT | Execution graph: nodes, animated edges, Controls, MiniMap. |
+| `recharts` | ^3.10.1 | MIT | Every chart on Overview and Metrics. |
+| `@tanstack/react-table` | ^9.3.1 | MIT | Sorting/filtering/pagination of the workflows ledger. |
 | `@tanstack/react-query` | 5.104.5 | MIT | Polling / caching. |
+| `radix-ui` | ^1.8.1 | MIT | Primitives behind the shadcn/ui components (dialog, tabs, select, tooltip, sheet, toast…). |
+| `shadcn/ui` components | vendored | MIT (Vercel) | Copied into `web/src/components/ui/*` — source in this repo, not a runtime dependency. |
+| `class-variance-authority` | ^0.7.1 | Apache-2.0 | Component variants. |
+| `clsx` / `tailwind-merge` | ^2.1.1 / ^3.7.0 | MIT | The `cn()` class merger at `@/lib/utils`. |
+| `cmdk` | ^1.1.1 | MIT | Command palette. |
+| `sonner` | ^2.0.8 | MIT | Toasts. |
+| `motion` (Motion One / framer-motion lineage) | ^14.6.0 | MIT | Route and disclosure transitions under `MotionConfig reducedMotion="user"`. |
+| `lucide-react` | ^1.61.0 | ISC | Icon set (§3). |
+| `tailwindcss` + `@tailwindcss/vite` | ^4.3.3 | MIT | Token engine and utility layer. |
+| `tw-animate-css` | ^1.4.0 | MIT | Keyframe utilities used by Radix open/close animations. |
 | `react`, `react-dom` | 19.3.1 | MIT | UI runtime. |
 | `react-router` | ^7.0.0 | MIT | Routing. |
-| `vite` | 8.3.5 | MIT | Build tool (dev only). |
+| `vite` | 8.3.5 | MIT | Build tool. |
 
-**React Flow attribution:** the graph uses the library's official
-`proOptions={{ hideAttribution: true }}` supported option, also mirrored in CSS
-(`.fx-graph .react-flow__attribution { display: none }`). React Flow is MIT;
-hiding the on-canvas attribution badge is an explicit, supported feature of the
-package and does not violate its licence.
+**React Flow attribution — corrected in Phase 7.** The Phase 6 note here claimed
+hiding the on-canvas badge via `proOptions={{ hideAttribution: true }}` was a
+supported, licence-clean choice. It is not: removing the attribution is a
+**React Flow Pro** subscription feature, which this project does not hold. The
+option and the matching `display:none` rule were removed, the badge is rendered,
+and it is re-tokened into the system (`web/src/graph/graph.css`) so it reads as
+part of the surface instead of fighting it. Console warnings about a hidden
+attribution are gone.
 
 ## 5. Brand naming — what was renamed and what deliberately stayed
 Phase 6.1 is a **presentation-layer** rebrand ("Fathom" → "Nunatak"). Renamed:

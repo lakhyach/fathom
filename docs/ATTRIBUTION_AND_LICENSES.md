@@ -46,15 +46,53 @@ no remote, no published images — so the obligation is staged, not live).
 **Licensing allowlist (CI-enforced at M3.1):** MIT, BSD-2/3-Clause, Apache-2.0, ISC, MPL-2.0. Anything else (GPL/AGPL/unlicensed) fails the build — this is the cheap wall that keeps the portfolio claim safe.
 `confluent-kafka-go/v2` is *not* a dependency (ADR-005 decision); it remains in `tools/depprobe` history only as probe evidence, so its Apache-2.0/librdkafka obligations do not attach to shipped binaries.
 
-## 3. Frontend dependencies (npm registry metadata, 2026-10-23 🔬)
+## 3. Frontend dependencies (npm registry metadata, re-read 2026-10-24 for Phase 7 🔬)
+
+Licences below were taken from `npm view <pkg> license` against the installed
+tree, not from memory.
 
 | Package | Version pinned | License |
 | --- | --- | --- |
 | `react`, `react-dom` | 19.3.1 | MIT |
 | `vite` | 8.3.5 | MIT |
 | `typescript` | as scaffolded by Vite template (TS 7.0.2 is newly released; adopt only after compatibility check — ADR-014) | Apache-2.0 |
-| `@xyflow/react` | 12.12.0 | **MIT** 🔬 (core library is MIT; the separate "Pro" platform license applies only to pro-template assets, which we do not use — [xyflow open-source](https://xyflow.com/open-source)) |
 | `@tanstack/react-query` | 5.104.5 | MIT |
+| `@xyflow/react` | 12.12.0 | **MIT** 🔬 (core library is MIT; the separate "Pro" platform license applies only to pro-template assets, which we do not use — [xyflow open-source](https://xyflow.com/open-source)) |
+| `tailwindcss` + `@tailwindcss/vite` | ^4.3.3 | MIT |
+| `radix-ui` | ^1.8.1 | MIT |
+| `shadcn/ui` component sources | vendored into `web/src/components/ui/*` | MIT |
+| `class-variance-authority` | ^0.7.1 | **Apache-2.0** 🔬 — package ships `LICENSE` only, **no `NOTICE` file** |
+| `clsx` | ^2.1.1 | MIT |
+| `tailwind-merge` | ^3.7.0 | MIT |
+| `tw-animate-css` | ^1.4.0 | MIT |
+| `cmdk` | ^1.1.1 | MIT |
+| `sonner` | ^2.0.8 | MIT |
+| `motion` | ^14.6.0 | MIT |
+| `lucide-react` | ^1.61.0 | ISC |
+| `recharts` | ^3.10.1 | MIT |
+| `@tanstack/react-table` | ^9.3.1 | MIT |
+| `@fontsource-variable/geist`, `@fontsource-variable/geist-mono` | ^5.3.0 | OFL-1.1 🔬 (the typeface itself; self-hosted, no runtime fetch — see `ASSET_ATTRIBUTION.md` §1) |
+
+**Removed in Phase 7** (no remaining importer, so dropped rather than left
+installed): `@fontsource-variable/inter`, `@fontsource-variable/jetbrains-mono`,
+`@fontsource-variable/space-grotesk` (all OFL-1.1), `next-themes` (MIT), and
+`cn` (an unrelated npm package that was never imported — the app's `cn()` helper
+is local at `@/lib/utils`).
+
+**React Flow attribution — licence posture corrected in Phase 7.** `@xyflow/react`
+is MIT, but hiding the on-canvas "React Flow" badge is gated behind a **React Flow
+Pro** subscription, which this project does not hold. Phase 6 documented
+`proOptions={{ hideAttribution: true }}` as a supported, licence-clean option; it
+is not. The option and the matching `display:none` CSS were removed, the badge
+renders, and it is re-tokened into the surface instead.
+
+**Apache-2.0 obligation (open).** `class-variance-authority` is Apache-2.0 with no
+NOTICE file, so the requirement is to ship its license text with the distributed
+work. §4's `THIRD_PARTY_NOTICES/` CI mechanism currently covers the **Go** binary
+only; the web bundle's third-party notices are not yet generated. Tracked as
+remaining work in `PHASE_7_DESIGN_SYSTEM_REPLACEMENT_REPORT.md` — not claimed as
+done here.
+
 
 ## 4. Apache-2.0 obligations handling
 
