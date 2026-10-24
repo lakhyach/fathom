@@ -14,8 +14,8 @@ import type { StepView } from "../api/types";
 export const NODE_W = 216;
 export const NODE_H = 74;
 const GAP_X = 74;
-const ORIGIN_X = 24;
-const ORIGIN_Y = 40;
+export const ORIGIN_X = 24;
+export const ORIGIN_Y = 40;
 
 export interface StepNodeData extends Record<string, unknown> {
   step: StepView;
@@ -43,7 +43,7 @@ export function layoutGraph(steps: StepView[]): { nodes: Node<StepNodeData>[]; e
   for (let i = 0; i < ordered.length - 1; i++) {
     const target = ordered[i + 1];
     const begun = target.state !== "PENDING";
-    const stroke = begun ? toneVar(stepStatus(target.state).tone) : "var(--fx-line-strong)";
+    const stroke = begun ? toneVar(stepStatus(target.state).tone) : "var(--border)";
     edges.push({
       id: `${ordered[i].step_type}->${target.step_type}`,
       source: ordered[i].step_type,

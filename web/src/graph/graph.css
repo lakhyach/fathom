@@ -1,28 +1,22 @@
-/* React Flow chrome, restyled to the Nunatak identity. The library's default
-   stylesheet is imported first; everything below re-tokens it so nothing looks
-   like the stock template. Node tones reuse the shared status tokens. */
+/* React Flow library overrides for the Glacier Glass identity. The stock
+   stylesheet is imported first; these rules re-token only the pieces the
+   library paints itself (handles, edges, controls, attribution). The step node,
+   progress bar, a11y rail and attempt gantt are all Tailwind now — they live in
+   the components, not here. */
 @import "@xyflow/react/dist/style.css";
 
-.fx-graph {
-  width: 100%;
-  height: 288px;
-  border: var(--fx-hair) solid var(--fx-line);
-  border-radius: var(--fx-r-md);
-  background:
-    radial-gradient(58% 68% at 50% 44%, oklch(0.66 0.17 255 / 0.07), transparent 72%),
-    radial-gradient(120% 120% at 0% 0%, var(--fx-panel-raised), var(--fx-abyss));
-  overflow: hidden;
-}
-.fx-graph .react-flow__background {
-  z-index: 0;
-}
-.fx-graph .react-flow__edge-path {
-  stroke-linecap: round;
-  transition: stroke var(--fx-dur) var(--fx-ease), opacity var(--fx-dur) var(--fx-ease),
-    stroke-width var(--fx-dur) var(--fx-ease);
-}
+/* Attribution stays visible: removing it requires a React Flow Pro licence the
+   project does not hold. It is re-tokened into the system instead. */
 .fx-graph .react-flow__attribution {
-  display: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+.fx-graph .react-flow__attribution a {
+  color: inherit;
 }
 .fx-graph .react-flow__handle {
   opacity: 0;
@@ -35,176 +29,40 @@
   cursor: pointer;
   font-family: inherit;
 }
+.fx-graph .react-flow__edge-path {
+  stroke-linecap: round;
+}
+.fx-graph .react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px -18px oklch(0 0 0 / 60%);
+  overflow: hidden;
+}
 .fx-graph .react-flow__controls-button {
-  background: var(--fx-panel);
-  border-bottom: var(--fx-hair) solid var(--fx-line);
-  fill: var(--fx-ink-muted);
+  width: 26px;
+  height: 26px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  fill: var(--muted-foreground);
+}
+.fx-graph .react-flow__controls-button:hover {
+  background: var(--accent);
+  fill: var(--foreground);
+}
+.fx-graph .react-flow__controls-button svg {
+  fill: currentColor;
 }
 
-/* the step node — compact card: a leading status glyph + name on top, the
-   status badge and attempt count below. The whole border is tinted by the
-   step's real tone (badge text co-renders, so colour never travels alone). */
-.fx-node {
-  position: relative;
-  border-radius: var(--fx-r-md);
-  background: var(--fx-panel-raised);
-  border: 1px solid var(--fx-st-tone, var(--fx-line));
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--fx-ink);
-  box-shadow: var(--fx-shadow-sm);
-  transition: border-color var(--fx-dur-fast) var(--fx-ease),
-    box-shadow var(--fx-dur-fast) var(--fx-ease), transform var(--fx-dur-fast) var(--fx-ease);
+/* running step nodes breathe; the global reduced-motion rule in index.css stops it */
+@keyframes node-pulse {
+  0%,
+  100% {
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.4);
+  }
+  50% {
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.4), 0 0 0 3px oklch(0.8 0.14 190 / 0.16);
+  }
 }
-.fx-node:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--fx-shadow-md);
-}
-.fx-node--selected {
-  border-color: var(--fx-blue);
-  box-shadow: var(--fx-glow-blue), var(--fx-shadow-md);
-}
-.fx-node--completed { --fx-st-tone: var(--fx-st-completed); }
-.fx-node--running { --fx-st-tone: var(--fx-st-running); }
-.fx-node--compensating { --fx-st-tone: var(--fx-st-compensating); }
-.fx-node--negative { --fx-st-tone: var(--fx-st-negative); }
-.fx-node--manual { --fx-st-tone: var(--fx-st-manual); }
-.fx-node--warn { --fx-st-tone: var(--fx-st-warn); }
-.fx-node--pending { --fx-st-tone: var(--fx-st-pending); }
-
-.fx-node__top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.fx-node__icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  color: var(--fx-st-tone, var(--fx-st-pending));
-  background: var(--fx-inset);
-  border: var(--fx-hair) solid var(--fx-st-tone, var(--fx-line));
-}
-.fx-node__type {
-  font-size: var(--fx-fs-body);
-  font-weight: 640;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-  color: var(--fx-ink);
-}
-.fx-node__comp {
-  flex: none;
-  color: var(--fx-violet-bright);
-  display: inline-flex;
-}
-.fx-node__foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--fx-fs-micro);
-  color: var(--fx-ink-faint);
-}
-.fx-node__attempts {
-  padding: 1px 6px;
-  border-radius: var(--fx-r-pill);
-  background: var(--fx-inset);
-  border: var(--fx-hair) solid var(--fx-line-faint);
-  color: var(--fx-ink-muted);
-}
-.fx-node__lease {
-  display: inline-flex;
-  align-items: center;
-  color: var(--fx-st-running);
-}
-.fx-node__lease--live {
-  color: var(--fx-st-running);
-}
-.fx-node__rollback {
-  flex: none;
-  color: var(--fx-st-compensating);
-  font-weight: 600;
-  font-size: var(--fx-fs-micro);
-  white-space: nowrap;
-  padding: 1px 7px;
-  border-radius: var(--fx-r-pill);
-  background: color-mix(in oklch, var(--fx-st-compensating) 12%, transparent);
-  border: var(--fx-hair) solid color-mix(in oklch, var(--fx-st-compensating) 38%, transparent);
-}
-
-/* running nodes breathe; reduced-motion kills it (global rule in tokens.css) */
 .fx-node--running {
-  animation: fx-node-pulse 2.4s var(--fx-ease) infinite;
-}
-@keyframes fx-node-pulse {
-  0%, 100% { box-shadow: var(--fx-shadow-sm); }
-  50% { box-shadow: var(--fx-shadow-sm), 0 0 0 3px oklch(0.8 0.14 85 / 0.14); }
-}
-
-/* a11y step rail — the graph is decorative for AT; this list is the semantic
-   equivalent and drives the same selection */
-.fx-rail-steps {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 260px;
-  overflow: auto;
-}
-.fx-rail-step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  text-align: left;
-  padding: 8px 10px;
-  border-radius: var(--fx-r-sm);
-  border: var(--fx-hair) solid transparent;
-  background: transparent;
-  color: var(--fx-ink-secondary);
-  font: inherit;
-  cursor: pointer;
-  transition: background var(--fx-dur-fast) var(--fx-ease), border-color var(--fx-dur-fast) var(--fx-ease);
-}
-.fx-rail-step:hover {
-  background: var(--fx-accent-softer);
-  border-color: var(--fx-line-strong);
-}
-.fx-rail-step--on {
-  border-color: var(--fx-blue);
-  background: var(--fx-accent-soft);
-  color: var(--fx-ink);
-  box-shadow: var(--fx-glow-blue);
-}
-.fx-rail-step__idx {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  display: grid;
-  place-items: center;
-  border-radius: 5px;
-  background: var(--fx-inset);
-  font-size: var(--fx-fs-micro);
-}
-.fx-rail-step__type {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--fx-fs-small);
-  font-weight: 540;
-}
-
-@media (max-width: 780px) {
-  .fx-graph { height: 232px; }
+  animation: node-pulse 2.4s ease-in-out infinite;
 }

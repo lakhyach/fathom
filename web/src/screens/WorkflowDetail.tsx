@@ -1,27 +1,51 @@
-/* Execution inspector — the signature Nunatak surface, laid out to the Phase 6.1
-   reference composition: a global KPI strip, an execution header, the workflow
-   graph as the centrepiece with a real progress bar, a right-hand details rail,
-   a tab strip, and lower operations panels (selected step · event log · execution
-   metrics). Every value is a real StepView/Workflow/audit fact. The graph renders
-   only the sequential chain the backend actually provides (position order +
-   compensator attributes) — no inferred branching DAG, no fabricated trends, no
-   CPU/memory telemetry the engine does not expose, no pause/cancel the machine
-   does not admit. Unsupported views say so plainly. */
-import { useEffect, useMemo, useRef, useState } from "react";
+/* Execution inspector — the signature Nunatak surface: a global KPI strip, an
+   execution header, the workflow graph as the centrepiece with a real progress
+   bar, a right-hand details rail, a tab strip, and lower operations panels
+   (selected step · event log · execution metrics). Every value is a real
+   StepView/Workflow/audit fact. The graph renders only the sequential chain the
+   backend actually provides (position order + compensator attributes) — no
+   inferred branching DAG, no fabricated trends, no CPU/memory telemetry the
+   engine does not expose, no pause/cancel the machine does not admit.
+   Unsupported views say so plainly.
+
+   Phase 7 rebuild: Tailwind layout, kit Panel/KpiCard/StatusBadge/ConfirmAction,
+   shadcn Table/Button, lucide glyphs, React Flow graph. Data logic unchanged. */
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
+  Controls,
+  MiniMap,
   type Edge,
   type Node,
+  type ReactFlowInstance,
 } from "@xyflow/react";
+import {
+  Activity,
+  Braces,
+  Check,
+  ChevronRight,
+  CircleSlash,
+  Clock,
+  Inbox,
+  Info,
+  Layers,
+  Play,
+  RefreshCw,
+  Route,
+  ScrollText,
+  TriangleAlert,
+  Undo2,
+  type LucideIcon,
+} from "lucide-react";
 
 import { useAttempts, useDlq, useEvents, useInbound, useMetrics, useWorkflow, useWorkflowAction } from "../api/hooks";
 import { workflowCensus } from "../api/prom";
 import { StepNode } from "../graph/StepNode";
-import { layoutGraph, type StepNodeData } from "../graph/layout";
-import { classificationStatus, stepStatus, workflowStatus } from "../theme/status";
+import { graphWidth, NODE_H, ORIGIN_X, ORIGIN_Y, layoutGraph, type StepNodeData } from "../graph/layout";
+import { classificationStatus, stepStatus, toneVar, workflowStatus } from "../theme/status";
 import {
   ConfirmAction,
   CopyChip,
@@ -39,26 +63,10 @@ import {
   truncate,
   useToast,
 } from "../components/ui";
-import {
-  IconActivity,
-  IconAlert,
-  IconCancel,
-  IconCheck,
-  IconChevronRight,
-  IconClock,
-  IconDeadLetter,
-  IconExecution,
-  IconInfo,
-  IconJson,
-  IconLayers,
-  IconLogs,
-  IconRefresh,
-  IconRoute,
-  IconUndo,
-} from "../icons";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { Attempt, StepView, Workflow } from "../api/types";
-import type { ReactNode } from "react";
-import "./screens.css";
 
 const TERMINAL = new Set(["COMPLETED", "FAILED", "ABORTED"]);
 const DONE = new Set(["SUCCEEDED", "COMPENSATED"]);
@@ -66,22 +74,16 @@ const nodeTypes = { step: StepNode };
 
 /* leading status sigil for the exec header — a tone-tinted circular chip that
    mirrors the node glyphs, so the header and the graph read as one system. */
-function sigilGlyph(tone: string) {
+function sigilGlyph(tone: string): ReactNode {
+  const cls = "size-4";
   switch (tone) {
-    case "completed":
-      return <IconCheck size={16} />;
-    case "running":
-      return <IconExecution size={16} />;
-    case "compensating":
-      return <IconUndo size={16} />;
-    case "negative":
-      return <IconCancel size={16} />;
-    case "manual":
-      return <IconInfo size={16} />;
-    case "warn":
-      return <IconAlert size={16} />;
-    default:
-      return <IconClock size={16} />;
+    case "completed": return <Check className={cls} />;
+    case "running": return <Play className={cls} />;
+    case "compensating": return <Undo2 className={cls} />;
+    case "negative": return <CircleSlash className={cls} />;
+    case "manual": return <Info className={cls} />;
+    case "warn": return <TriangleAlert className={cls} />;
+    default: return <Clock className={cls} />;
   }
 }
 
@@ -134,7 +136,7 @@ export function WorkflowDetail() {
   }, [id, steps]);
 
   return (
-    <div className="fx-screen fx-inspector">
+    <div className="mx-auto w-full max-w-[1400px]">
       {wf.isLoading && <LoadingRows rows={5} />}
       {wf.isError && <ErrorState error={wf.error} onRetry={() => wf.refetch()} />}
 
@@ -144,8 +146,8 @@ export function WorkflowDetail() {
 
           <ExecHeader wf={wf.data} updatedAt={wf.dataUpdatedAt} />
 
-          <div className="fx-insp-grid">
-            <div className="fx-insp-main">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="flex min-w-0 flex-col gap-4">
               <GraphPanel
                 nodes={nodes}
                 edges={edges}
@@ -156,18 +158,18 @@ export function WorkflowDetail() {
                 onPick={pickStep}
               />
 
-              <div className="fx-tabs" role="tablist" aria-label="Execution views">
-                <TabButton id="flow" tab={tab} setTab={setTab} label="Execution Flow" Icon={IconExecution} />
-                <TabButton id="steps" tab={tab} setTab={setTab} label="Steps" Icon={IconLayers} count={steps.length} />
-                <TabButton id="events" tab={tab} setTab={setTab} label="Events" Icon={IconActivity} source={id} kind="inbound" />
-                <TabButton id="attempts" tab={tab} setTab={setTab} label="Attempts" Icon={IconRefresh} source={id} kind="attempts" />
-                <TabButton id="io" tab={tab} setTab={setTab} label="Input / Output" Icon={IconJson} />
-                <TabButton id="audit" tab={tab} setTab={setTab} label="Audit Trail" Icon={IconLogs} source={id} kind="audit" />
-                <TabButton id="traces" tab={tab} setTab={setTab} label="Traces" Icon={IconRoute} />
+              <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Execution views">
+                <TabButton id="flow" tab={tab} setTab={setTab} label="Execution Flow" Icon={Play} />
+                <TabButton id="steps" tab={tab} setTab={setTab} label="Steps" Icon={Layers} count={steps.length} />
+                <TabButton id="events" tab={tab} setTab={setTab} label="Events" Icon={Activity} source={id} kind="inbound" />
+                <TabButton id="attempts" tab={tab} setTab={setTab} label="Attempts" Icon={RefreshCw} source={id} kind="attempts" />
+                <TabButton id="io" tab={tab} setTab={setTab} label="Input / Output" Icon={Braces} />
+                <TabButton id="audit" tab={tab} setTab={setTab} label="Audit Trail" Icon={ScrollText} source={id} kind="audit" />
+                <TabButton id="traces" tab={tab} setTab={setTab} label="Traces" Icon={Route} />
               </div>
 
               {tab === "flow" && (
-                <div className="fx-lower">
+                <div className="grid gap-4 lg:grid-cols-3">
                   <StepPanel step={chosenStep} />
                   <EventLogPanel id={id} />
                   <ExecMetricsPanel wf={wf.data} updatedAt={wf.dataUpdatedAt} />
@@ -181,7 +183,7 @@ export function WorkflowDetail() {
               {tab === "traces" && <TracesTab id={id} />}
             </div>
 
-            <aside className="fx-insp-side">
+            <aside className="flex min-w-0 flex-col gap-4">
               <DetailsPanel wf={wf.data} onViewIO={() => setTab("io")} />
               <ActionPanel id={wf.data.id} state={wf.data.state} version={wf.data.version} />
             </aside>
@@ -205,22 +207,20 @@ function KpiStrip() {
   const total = [...byState.values()].reduce((a, b) => a + b, 0);
 
   const cards = [
-    { k: "Total", v: total, tone: "neutral" as const, icon: <IconLayers size={16} /> },
-    { k: "Completed", v: sum("COMPLETED"), tone: "completed" as const, icon: <IconCheck size={16} /> },
-    { k: "Active", v: sum("QUEUED", "RUNNING", "RETRY_WAITING", "COMPENSATING", "CANCELLING"), tone: "running" as const, icon: <IconExecution size={16} /> },
-    { k: "Failed / aborted", v: sum("FAILED", "ABORTED"), tone: "negative" as const, icon: <IconAlert size={16} /> },
-    { k: "Manual", v: sum("FAILED_MANUAL"), tone: "manual" as const, icon: <IconInfo size={16} /> },
+    { k: "Total", v: total, tone: "neutral" as const, icon: <Layers className="size-4" /> },
+    { k: "Completed", v: sum("COMPLETED"), tone: "completed" as const, icon: <Check className="size-4" /> },
+    { k: "Active", v: sum("QUEUED", "RUNNING", "RETRY_WAITING", "COMPENSATING", "CANCELLING"), tone: "running" as const, icon: <Play className="size-4" /> },
+    { k: "Failed / aborted", v: sum("FAILED", "ABORTED"), tone: "negative" as const, icon: <TriangleAlert className="size-4" /> },
+    { k: "Manual", v: sum("FAILED_MANUAL"), tone: "manual" as const, icon: <Info className="size-4" /> },
   ];
   return (
-    <div className="fx-kpi" aria-label="Fleet census">
+    <div aria-label="Fleet census" className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       {metrics.isError ? (
-        <div className="fx-kpi__err"><ErrorState error={metrics.error} onRetry={() => metrics.refetch()} /></div>
+        <div className="sm:col-span-2 xl:col-span-5"><ErrorState error={metrics.error} onRetry={() => metrics.refetch()} /></div>
       ) : metrics.isLoading ? (
         <LoadingRows rows={1} />
       ) : (
-        cards.map((c, i) => (
-          <KpiCard key={c.k} index={i} kicker={c.k} value={c.v} tone={c.tone} icon={c.icon} />
-        ))
+        cards.map((c, i) => <KpiCard key={c.k} index={i} kicker={c.k} value={c.v} tone={c.tone} icon={c.icon} />)
       )}
     </div>
   );
@@ -236,32 +236,29 @@ function ExecHeader({ wf, updatedAt }: { wf: Workflow; updatedAt: number }) {
   const elapsed = wf.started_at && nowRef ? nowRef - Date.parse(wf.started_at) : null;
   const meta = workflowStatus(wf.state);
   return (
-    <div className="fx-exec-head">
-      <div className="fx-exec-head__main">
-        <span className="fx-crumb">
-          <Link to="/workflows" className="fx-link">Workflows</Link>
-          <span aria-hidden="true"> / </span>
-          <span className="mono" title={wf.id}>{truncate(wf.id, 14)}…</span>
-        </span>
-        <div className="fx-exec-titlerow">
-          <span className={`fx-exec-sigil fx-exec-sigil--${meta.tone}`} aria-hidden="true">
+    <div className="surface-card mb-4 flex flex-wrap items-start justify-between gap-4 rounded-xl px-5 py-4">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Link to="/workflows" className="text-primary hover:underline">Workflows</Link>
+          <span aria-hidden="true">/</span>
+          <span className="font-mono" title={wf.id}>{truncate(wf.id, 14)}…</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <span className="grid size-9 place-items-center rounded-full border" style={{ color: toneVar(meta.tone), borderColor: toneVar(meta.tone) }} aria-hidden="true">
             {sigilGlyph(meta.tone)}
           </span>
-          <h1 className="fx-exec-title">
-            {wf.def_name}
-            <span className="fx-dim mono">v{wf.def_version}</span>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            {wf.def_name} <span className="font-mono text-sm font-normal text-muted-foreground">v{wf.def_version}</span>
           </h1>
           <StatusBadge state={wf.state} />
         </div>
-        <div className="fx-exec-meta">
-          <span><span className="fx-dim">Started</span> <TimeText iso={wf.started_at} /></span>
-          {elapsed !== null && <span><span className="fx-dim">Elapsed</span> {humanDuration(elapsed)}{running ? " · live" : ""}</span>}
-          <span><span className="fx-dim">Definition</span> {wf.def_name}</span>
+        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
+          <span><span className="text-muted-foreground/80">Started</span> <TimeText iso={wf.started_at} /></span>
+          {elapsed !== null && <span><span className="text-muted-foreground/80">Elapsed</span> {humanDuration(elapsed)}{running ? " · live" : ""}</span>}
+          <span><span className="text-muted-foreground/80">Definition</span> {wf.def_name}</span>
         </div>
       </div>
-      <div className="fx-exec-head__side">
-        {updatedAt > 0 && <SnapshotAt updatedAt={updatedAt} />}
-      </div>
+      <div className="flex items-center gap-3">{updatedAt > 0 && <SnapshotAt updatedAt={updatedAt} />}</div>
     </div>
   );
 }
@@ -278,6 +275,38 @@ function GraphPanel({ nodes, edges, steps, wf, updatedAt, chosen, onPick }: {
   onPick: (t: string) => void;
 }) {
   const railRef = useRef<HTMLUListElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const flowRef = useRef<ReactFlowInstance<Node<StepNodeData>, Edge> | null>(null);
+  const [stageBox, setStageBox] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setStageBox((cur) => (Math.abs(cur.w - width) < 1 && Math.abs(cur.h - height) < 1 ? cur : { w: width, h: height }));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  /* Frame the chain: fit it when it is readable at full width, otherwise pin to
+     step 1 at zoom 1 so the inspector never opens with the failed step off-canvas. */
+  const totalW = graphWidth(steps.length);
+  useEffect(() => {
+    const rf = flowRef.current;
+    if (!rf || stageBox.w === 0 || steps.length === 0) return;
+    if (totalW + ORIGIN_X * 2 <= stageBox.w) {
+      rf.fitView({ padding: 0.18, minZoom: 0.75, maxZoom: 1, duration: 220 });
+    } else {
+      rf.setViewport(
+        { x: ORIGIN_X, y: Math.max(8, (stageBox.h - NODE_H) / 2 - ORIGIN_Y), zoom: 1 },
+        { duration: 220 },
+      );
+    }
+    // Re-frames only when the chain or the stage geometry changes — a deliberate
+    // pan/zoom by the operator is never stolen back on a background poll.
+  }, [totalW, stageBox.w, stageBox.h, steps.length]);
 
   const done = steps.filter((s) => DONE.has(s.state)).length;
   const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
@@ -288,13 +317,13 @@ function GraphPanel({ nodes, edges, steps, wf, updatedAt, chosen, onPick }: {
   if (steps.length === 0) {
     return (
       <Panel>
-        <EmptyState icon={<IconExecution size={22} />} title="No steps recorded" hint="This workflow has no step rows to render." />
+        <EmptyState icon={<Play className="size-5" />} title="No steps recorded" hint="This workflow has no step rows to render." />
       </Panel>
     );
   }
 
   const onRailKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
-    const btns = Array.from(railRef.current?.querySelectorAll<HTMLButtonElement>("button.fx-rail-step") ?? []);
+    const btns = Array.from(railRef.current?.querySelectorAll<HTMLButtonElement>("button[data-rail-step]") ?? []);
     if (btns.length === 0) return;
     const idx = btns.indexOf(document.activeElement as HTMLButtonElement);
     const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
@@ -311,55 +340,72 @@ function GraphPanel({ nodes, edges, steps, wf, updatedAt, chosen, onPick }: {
   };
 
   return (
-    <section className="panel fx-graphpanel">
-      <div className="fx-graph" role="group" aria-label="Workflow execution graph (visual) — use the step list for keyboard access">
+    <section className="surface-card overflow-hidden rounded-xl">
+      <div ref={stageRef} className="fx-graph h-[300px] w-full overflow-hidden border-b border-border/60 lg:h-[326px]" role="group" aria-label="Workflow execution graph (visual) — use the step list for keyboard access">
         <ReactFlow
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           onNodeClick={(_, n) => onPick(n.id)}
-          fitView
-          fitViewOptions={{ padding: 0.16, maxZoom: 1.75 }}
-          minZoom={0.4}
+          onInit={(inst) => { flowRef.current = inst as ReactFlowInstance<Node<StepNodeData>, Edge>; }}
+          minZoom={0.3}
+          maxZoom={1.6}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable
-          proOptions={{ hideAttribution: true }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="var(--fx-line-faint)" />
+          <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="var(--border)" />
+          <Controls showInteractive={false} position="bottom-left" />
+          {steps.length > 5 && (
+            <MiniMap
+              pannable
+              zoomable
+              position="bottom-right"
+              style={{ width: 132, height: 64 }}
+              maskColor="oklch(0.128 0.014 236 / 78%)"
+              bgColor="var(--card)"
+              nodeStrokeWidth={3}
+              nodeColor={(n) => toneVar(stepStatus((n.data as StepNodeData).step.state).tone)}
+            />
+          )}
         </ReactFlow>
       </div>
 
-      <div className="fx-progress">
-        <div className="fx-progress__bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <span className="fx-progress__fill" style={{ width: `${pct}%` }} />
+      <div className="px-5 py-3">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <span className="block h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
         </div>
-        <div className="fx-progress__row">
-          <span className="fx-progress__step">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>
             Step {current ? steps.findIndex((s) => s.step_type === current.step_type) + 1 : "—"} of {steps.length}
-            {current && <span className="fx-dim"> · {current.step_type}</span>}
+            {current && <span> · {current.step_type}</span>}
           </span>
-          <span className="fx-progress__pct num">{pct}% complete</span>
-          {elapsed !== null && <span className="fx-progress__el mono">{humanDuration(elapsed)} elapsed</span>}
+          <span className="font-mono tabular-nums">{pct}% complete</span>
+          {elapsed !== null && <span className="font-mono">{humanDuration(elapsed)} elapsed</span>}
         </div>
       </div>
 
-      <div className="fx-rail-wrap">
-        <p className="kicker">Steps · arrow keys to move, Enter to inspect</p>
-        <ul className="fx-rail-steps" ref={railRef} onKeyDown={onRailKeyDown}>
+      <div className="border-t border-border/60 px-5 py-3">
+        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Steps · arrow keys to move, Enter to inspect</p>
+        <ul className="mt-2 flex max-h-64 flex-col gap-0.5 overflow-auto" ref={railRef} onKeyDown={onRailKeyDown}>
           {steps.map((s, i) => {
             const m = stepStatus(s.state);
+            const on = chosen?.step_type === s.step_type;
             return (
               <li key={s.step_type}>
                 <button
                   type="button"
-                  className={`fx-rail-step ${chosen?.step_type === s.step_type ? "fx-rail-step--on" : ""}`}
-                  aria-pressed={chosen?.step_type === s.step_type}
+                  data-rail-step
+                  aria-pressed={on}
                   onClick={() => onPick(s.step_type)}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-left text-sm transition-colors",
+                    on ? "border-primary/40 bg-primary/10" : "border-transparent hover:border-border hover:bg-accent/40",
+                  )}
                 >
-                  <span className="fx-rail-step__idx num">{i + 1}</span>
-                  <span className={`fx-dot fx-dot--${m.tone}`} aria-hidden="true" />
-                  <span className="fx-rail-step__type mono">{s.step_type}</span>
+                  <span className="grid size-5 shrink-0 place-items-center rounded bg-ice font-mono text-[11px]">{i + 1}</span>
+                  <span className="size-1.5 shrink-0 rounded-full" style={{ background: toneVar(m.tone) }} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate font-mono text-[13px] font-medium">{s.step_type}</span>
                   <StatusBadge state={s.state} kind="step" size="sm" />
                 </button>
               </li>
@@ -374,14 +420,23 @@ function GraphPanel({ nodes, edges, steps, wf, updatedAt, chosen, onPick }: {
 /* -------------------------------- tabs ---------------------------------- */
 
 function TabButton({ id, label, tab, setTab, count, source, kind, Icon }: {
-  id: Tab; label: string; tab: Tab; setTab: (t: Tab) => void; count?: number; source?: string; kind?: "audit" | "inbound" | "attempts"; Icon: (p: { size?: number }) => ReactNode;
+  id: Tab; label: string; tab: Tab; setTab: (t: Tab) => void; count?: number; source?: string; kind?: "audit" | "inbound" | "attempts"; Icon: LucideIcon;
 }) {
+  const on = tab === id;
   return (
-    <button role="tab" aria-selected={tab === id} className={`fx-tab ${tab === id ? "fx-tab--on" : ""}`} onClick={() => setTab(id)}>
-      <Icon size={13} />
+    <button
+      role="tab"
+      aria-selected={on}
+      onClick={() => setTab(id)}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors",
+        on ? "border-primary/40 bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground",
+      )}
+    >
+      <Icon className="size-3.5" />
       {label}
-      {count != null && <span className="fx-tab__count">{count}</span>}
-      {source && kind && <TabCount source={source} kind={kind} active={tab === id} />}
+      {count != null && <span className="font-mono text-xs opacity-70">{count}</span>}
+      {source && kind && <TabCount source={source} kind={kind} active={on} />}
     </button>
   );
 }
@@ -391,7 +446,7 @@ function TabCount({ source, kind, active }: { source: string; kind: "audit" | "i
   const inbound = useInbound(active && kind === "inbound" ? source : undefined, { limit: 1 });
   const attempts = useAttempts(active && kind === "attempts" ? source : undefined);
   const n = kind === "audit" ? audit.data?.items.length : kind === "inbound" ? inbound.data?.items.length : attempts.data?.length;
-  return n ? <span className="fx-tab__count">{n}</span> : null;
+  return n ? <span className="ml-1 font-mono text-xs opacity-70">{n}</span> : null;
 }
 
 /* ---------------------------- lower: step panel -------------------------- */
@@ -400,28 +455,41 @@ function StepPanel({ step }: { step: StepView | null }) {
   if (!step) {
     return (
       <Panel title={<h2>Step details</h2>} kicker="execution flow">
-        <EmptyState icon={<IconInfo size={20} />} title="No step selected" hint="Click a node or a step row to inspect its state, attempts, lease and compensation." />
+        <EmptyState icon={<Info className="size-5" />} title="No step selected" hint="Click a node or a step row to inspect its state, attempts, lease and compensation." />
       </Panel>
     );
   }
   return (
-    <Panel title={<h2>Step · <span className="mono">{step.step_type}</span></h2>} kicker="selected" >
-      <div className="fx-stepdetail">
-        <div className="fx-stepdetail__head">
-          <StatusBadge state={step.state} kind="step" />
-          <span className="fx-dim mono">position {step.position}</span>
-        </div>
-        <dl className="fx-meta-list">
-          <div><span className="fx-meta-k">Attempts</span><span className="fx-meta-v num">{step.active_attempt} / {step.max_attempts}</span></div>
-          <div><span className="fx-meta-k">Compensable</span><span className="fx-meta-v">{step.compensable ? "yes" : "no"}</span></div>
-          {step.compensator_task && <div><span className="fx-meta-k">Compensator</span><span className="fx-meta-v mono">{step.compensator_task}</span></div>}
-          <div><span className="fx-meta-k">Lease holder</span><span className="fx-meta-v mono">{step.lease_holder ?? "—"}</span></div>
-          <div><span className="fx-meta-k">Lease expires</span><span className="fx-meta-v"><TimeText iso={step.lease_expires_at} timeOnly /></span></div>
-          <div><span className="fx-meta-k">Response by</span><span className="fx-meta-v"><TimeText iso={step.response_deadline_at} timeOnly /></span></div>
-          {step.compensation_deadline_at && <div><span className="fx-meta-k">Compensation by</span><span className="fx-meta-v"><TimeText iso={step.compensation_deadline_at} timeOnly /></span></div>}
-        </dl>
+    <Panel title={<h2 className="flex items-center gap-1.5">Step · <span className="font-mono">{step.step_type}</span></h2>} kicker="selected">
+      <div className="mb-3 flex items-center gap-3">
+        <StatusBadge state={step.state} kind="step" />
+        <span className="font-mono text-xs text-muted-foreground">position {step.position}</span>
       </div>
+      <MetaList
+        rows={[
+          ["Attempts", <span className="font-mono tabular-nums">{step.active_attempt} / {step.max_attempts}</span>],
+          ["Compensable", step.compensable ? "yes" : "no"],
+          ...(step.compensator_task ? [["Compensator", <span className="font-mono">{step.compensator_task}</span>] as const] : []),
+          ["Lease holder", <span className="font-mono">{step.lease_holder ?? "—"}</span>],
+          ["Lease expires", <TimeText iso={step.lease_expires_at} timeOnly />],
+          ["Response by", <TimeText iso={step.response_deadline_at} timeOnly />],
+          ...(step.compensation_deadline_at ? [["Compensation by", <TimeText iso={step.compensation_deadline_at} timeOnly />] as const] : []),
+        ]}
+      />
     </Panel>
+  );
+}
+
+function MetaList({ rows }: { rows: Array<readonly [string, ReactNode]> }) {
+  return (
+    <dl className="flex flex-col divide-y divide-border/40">
+      {rows.map(([k, v], i) => (
+        <div key={i} className="flex items-center justify-between gap-3 py-1.5 text-sm">
+          <dt className="text-muted-foreground">{k}</dt>
+          <dd className="min-w-0 truncate text-right text-foreground">{v}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -431,22 +499,24 @@ function EventLogPanel({ id }: { id: string | undefined }) {
   const events = useEvents(id, { limit: 40 });
   const rows = events.data?.items ?? [];
   return (
-    <Panel title={<h2>Event log</h2>} kicker="audit transitions · newest first" bodyClass="fx-panel__body--flush">
-      {events.isLoading && <div style={{ padding: 16 }}><LoadingRows rows={4} /></div>}
-      {events.isError && <div style={{ padding: 16 }}><ErrorState error={events.error} /></div>}
-      {!events.isLoading && rows.length === 0 && <EmptyState title="No transitions recorded" />}
+    <Panel title={<h2>Event log</h2>} kicker="audit transitions · newest first" bodyClass="p-0">
+      <div className="p-5">
+        {events.isLoading && <LoadingRows rows={4} />}
+        {events.isError && <ErrorState error={events.error} />}
+        {!events.isLoading && rows.length === 0 && <EmptyState title="No transitions recorded" />}
+      </div>
       {rows.length > 0 && (
-        <ul className="fx-log">
+        <ul className="flex flex-col">
           {rows.map((a) => {
             const tone = workflowStatus(a.to_state).tone;
             return (
-              <li key={a.seq} className="fx-log__row">
-                <span className="fx-log__time mono"><TimeText iso={a.created_at} timeOnly /></span>
-                <span className={`fx-log__lvl fx-log__lvl--${tone}`}>{a.kind}</span>
-                <span className="fx-log__msg">
+              <li key={a.seq} className="flex items-center gap-2 border-t border-border/40 px-5 py-2 text-xs">
+                <span className="font-mono text-muted-foreground"><TimeText iso={a.created_at} timeOnly /></span>
+                <span className="rounded px-1.5 py-0.5 font-medium" style={{ color: toneVar(tone) }}>{a.kind}</span>
+                <span className="min-w-0 flex-1 truncate text-foreground">
                   {a.from_state ? `${workflowStatus(a.from_state).label} → ${workflowStatus(a.to_state).label}` : workflowStatus(a.to_state).label}
                 </span>
-                <span className="fx-log__code mono">{a.reason_code}</span>
+                <span className="font-mono text-muted-foreground">{a.reason_code}</span>
               </li>
             );
           })}
@@ -473,16 +543,16 @@ function ExecMetricsPanel({ wf, updatedAt }: { wf: Workflow; updatedAt: number }
   ];
   return (
     <Panel title={<h2>Execution metrics</h2>} kicker="derived from real step data">
-      <div className="fx-exec-tiles">
+      <div className="grid grid-cols-2 gap-3">
         {metrics.map((m) => (
-          <div key={m.k} className="fx-exec-tile">
-            <span className="fx-exec-tile__v num">{m.v}</span>
-            <span className="fx-exec-tile__k">{m.k}</span>
+          <div key={m.k} className="rounded-lg border border-border/60 bg-ice px-3 py-2">
+            <div className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">{m.v}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{m.k}</div>
           </div>
         ))}
       </div>
-      <p className="fx-note">
-        Host CPU, memory and connection telemetry are <strong>not exposed</strong> by the engine, so they are
+      <p className="mt-3 text-xs text-muted-foreground">
+        Host CPU, memory and connection telemetry are <strong className="text-foreground">not exposed</strong> by the engine, so they are
         intentionally absent here rather than simulated.
       </p>
     </Panel>
@@ -493,24 +563,31 @@ function ExecMetricsPanel({ wf, updatedAt }: { wf: Workflow; updatedAt: number }
 
 function StepsTable({ steps, onPick, chosen }: { steps: StepView[]; onPick: (t: string) => void; chosen: StepView | null }) {
   return (
-    <Panel bodyClass="fx-panel__body--flush">
-      <table className="tbl">
-        <thead>
-          <tr><th>#</th><th>Step</th><th>State</th><th>Attempts</th><th>Lease</th><th>Compensator</th></tr>
-        </thead>
-        <tbody>
+    <Panel bodyClass="p-0">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">#</TableHead>
+            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Step</TableHead>
+            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">State</TableHead>
+            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Attempts</TableHead>
+            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Lease</TableHead>
+            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">Compensator</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {steps.map((s) => (
-            <tr key={s.step_type} className={`fx-link-row ${chosen?.step_type === s.step_type ? "fx-row--on" : ""}`} onClick={() => onPick(s.step_type)}>
-              <td className="num">{s.position}</td>
-              <td className="mono">{s.step_type}</td>
-              <td><StatusBadge state={s.state} kind="step" size="sm" /></td>
-              <td className="num">{s.active_attempt}/{s.max_attempts}</td>
-              <td className="mono fx-dim">{s.lease_holder ?? "—"}</td>
-              <td className="mono fx-dim">{s.compensator_task ?? "—"}</td>
-            </tr>
+            <TableRow key={s.step_type} className={cn("cursor-pointer", chosen?.step_type === s.step_type && "bg-primary/5")} onClick={() => onPick(s.step_type)}>
+              <TableCell className="font-mono tabular-nums">{s.position}</TableCell>
+              <TableCell className="font-mono">{s.step_type}</TableCell>
+              <TableCell><StatusBadge state={s.state} kind="step" size="sm" /></TableCell>
+              <TableCell className="font-mono tabular-nums">{s.active_attempt}/{s.max_attempts}</TableCell>
+              <TableCell className="font-mono text-muted-foreground">{s.lease_holder ?? "—"}</TableCell>
+              <TableCell className="font-mono text-muted-foreground">{s.compensator_task ?? "—"}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </Panel>
   );
 }
@@ -522,32 +599,32 @@ function AttemptsTab({ id }: { id: string | undefined }) {
   const [loading, error, items] = [attempts.isLoading, attempts.isError, attempts.data ?? []];
   const view = useMemo(() => buildGantt(items), [items]);
   return (
-    <Panel bodyClass="fx-panel__body--flush">
+    <Panel bodyClass="p-5">
       {loading && <LoadingRows rows={4} />}
-      {error && <div style={{ padding: 16 }}><ErrorState error={attempts.error} onRetry={() => attempts.refetch()} /></div>}
+      {error && <ErrorState error={attempts.error} onRetry={() => attempts.refetch()} />}
       {!loading && !error && items.length === 0 && (
         <EmptyState title="No attempts yet" hint="Attempts are written the moment a worker claims a step and issues it." />
       )}
       {view && (
-        <div className="fx-tl-wrap">
-          <div className="fx-tl">
+        <div>
+          <div className="flex flex-col gap-1.5">
             {view.rows.map((r, i) => (
-              <div key={`${r.a.step_type}-${r.a.number}-${i}`} className="fx-tl__row">
-                <span className="fx-tl__step">{r.a.step_type}</span>
-                <span className="fx-tl__num num">#{r.a.number}</span>
-                <span className="fx-tl__track">
+              <div key={`${r.a.step_type}-${r.a.number}-${i}`} className="flex items-center gap-3 text-xs">
+                <span className="w-32 shrink-0 truncate font-mono text-foreground">{r.a.step_type}</span>
+                <span className="w-8 shrink-0 font-mono text-muted-foreground tabular-nums">#{r.a.number}</span>
+                <span className="relative h-4 min-w-0 flex-1 rounded bg-ice">
                   <span
-                    className={`fx-tl__band fx-tl__band--${stepStatus(r.a.state).tone}`}
-                    style={{ left: `${r.leftPct}%`, width: `${r.widthPct}%` }}
+                    className="absolute inset-y-0 rounded"
+                    style={{ left: `${r.leftPct}%`, width: `${r.widthPct}%`, background: toneVar(stepStatus(r.a.state).tone) }}
                     title={`${stepStatus(r.a.state).label} · ${humanDuration(r.durationMs)}`}
                   />
                 </span>
-                <span className="fx-tl__dur">{humanDuration(r.durationMs)}</span>
+                <span className="w-16 shrink-0 text-right font-mono text-muted-foreground">{humanDuration(r.durationMs)}</span>
               </div>
             ))}
           </div>
-          <div className="fx-tl__scale"><span>+0s</span><span>{humanDuration(view.spanMs)}</span></div>
-          <p className="fx-note">
+          <div className="mt-2 flex justify-between font-mono text-[11px] text-muted-foreground"><span>+0s</span><span>{humanDuration(view.spanMs)}</span></div>
+          <p className="mt-3 text-xs text-muted-foreground">
             Bands are aligned to a shared origin (earliest attempt start). Running attempts are measured to “now”,
             so their length grows until the step settles — durations are read from real started/finished timestamps.
           </p>
@@ -581,23 +658,25 @@ function AuditTab({ id }: { id: string | undefined }) {
   const events = useEvents(id, { limit: 50 });
   const rows = events.data?.items ?? [];
   return (
-    <Panel bodyClass="fx-panel__body--flush">
-      {events.isLoading && <LoadingRows rows={4} />}
-      {events.isError && <div style={{ padding: 16 }}><ErrorState error={events.error} /></div>}
-      {!events.isLoading && rows.length === 0 && <EmptyState title="No transitions recorded" />}
+    <Panel bodyClass="p-0">
+      <div className="p-5">
+        {events.isLoading && <LoadingRows rows={4} />}
+        {events.isError && <ErrorState error={events.error} />}
+        {!events.isLoading && rows.length === 0 && <EmptyState title="No transitions recorded" />}
+      </div>
       {rows.length > 0 && (
-        <ul className="fx-feed">
+        <ul className="flex flex-col">
           {rows.map((a) => (
-            <li key={a.seq} className="fx-feed__item">
-              <span className="fx-feed__gutter"><span className={`fx-feed__mark fx-feed__mark--${workflowStatus(a.to_state).tone}`} /></span>
-              <div className="fx-feed__body">
-                <div className="fx-feed__top">
-                  <span className="fx-feed__title">{a.from_state ? `${workflowStatus(a.from_state).label} → ${workflowStatus(a.to_state).label}` : workflowStatus(a.to_state).label}</span>
-                  <span className="fx-feed__code mono">{a.reason_code}</span>
-                  <span className={`fx-badge fx-badge--sm fx-badge--${classificationStatus(a.kind).tone}`}><span className="fx-badge__label">{a.kind}</span></span>
+            <li key={a.seq} className="flex gap-3 border-t border-border/40 px-5 py-3">
+              <span className="pt-1.5"><span className="block size-2 rounded-full" style={{ background: toneVar(workflowStatus(a.to_state).tone) }} /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">{a.from_state ? `${workflowStatus(a.from_state).label} → ${workflowStatus(a.to_state).label}` : workflowStatus(a.to_state).label}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{a.reason_code}</span>
+                  <StatusBadge state={a.kind} kind="classification" size="sm" />
                 </div>
-                <div className="fx-feed__meta"><TimeText iso={a.created_at} /><span className="fx-dim">seq {a.seq}</span>{a.trace_id && <span className="mono fx-dim">trace {truncate(a.trace_id, 12)}</span>}</div>
-                {a.detail != null && <JsonView value={a.detail} />}
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground"><TimeText iso={a.created_at} /><span>seq {a.seq}</span>{a.trace_id && <span className="font-mono">trace {truncate(a.trace_id, 12)}</span>}</div>
+                {a.detail != null && <div className="mt-2"><JsonView value={a.detail} /></div>}
               </div>
             </li>
           ))}
@@ -613,23 +692,25 @@ function InboundTab({ id }: { id: string | undefined }) {
   const inbound = useInbound(id, { limit: 50 });
   const rows = inbound.data?.items ?? [];
   return (
-    <Panel bodyClass="fx-panel__body--flush">
-      {inbound.isLoading && <LoadingRows rows={4} />}
-      {inbound.isError && <div style={{ padding: 16 }}><ErrorState error={inbound.error} /></div>}
-      {!inbound.isLoading && rows.length === 0 && <EmptyState title="No inbound events correlated" hint="Correlated Kafka/outbox events for this workflow will appear here." />}
+    <Panel bodyClass="p-0">
+      <div className="p-5">
+        {inbound.isLoading && <LoadingRows rows={4} />}
+        {inbound.isError && <ErrorState error={inbound.error} />}
+        {!inbound.isLoading && rows.length === 0 && <EmptyState title="No inbound events correlated" hint="Correlated Kafka/outbox events for this workflow will appear here." />}
+      </div>
       {rows.length > 0 && (
-        <ul className="fx-feed">
+        <ul className="flex flex-col">
           {rows.map((e) => (
-            <li key={e.event_id} className="fx-feed__item">
-              <span className="fx-feed__gutter"><span className={`fx-feed__mark fx-feed__mark--${classificationStatus(e.classification).tone}`} /></span>
-              <div className="fx-feed__body">
-                <div className="fx-feed__top">
+            <li key={e.event_id} className="flex gap-3 border-t border-border/40 px-5 py-3">
+              <span className="pt-1.5"><span className="block size-2 rounded-full" style={{ background: toneVar(classificationStatus(e.classification).tone) }} /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge state={e.classification ?? ""} kind="classification" size="sm" />
-                  {e.step_type && <span className="fx-feed__title">{e.step_type}</span>}
-                  {e.attempt != null && <span className="fx-feed__code mono">attempt {e.attempt}</span>}
+                  {e.step_type && <span className="text-sm font-medium text-foreground">{e.step_type}</span>}
+                  {e.attempt != null && <span className="font-mono text-xs text-muted-foreground">attempt {e.attempt}</span>}
                 </div>
-                <div className="fx-feed__meta"><TimeText iso={e.received_at} /><CopyChip value={e.event_id} label={truncate(e.event_id, 16)} /></div>
-                <JsonView value={e.raw} />
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground"><TimeText iso={e.received_at} /><CopyChip value={e.event_id} label={truncate(e.event_id, 16)} /></div>
+                <div className="mt-2"><JsonView value={e.raw} /></div>
               </div>
             </li>
           ))}
@@ -643,17 +724,17 @@ function InboundTab({ id }: { id: string | undefined }) {
 
 function SpecTab({ wf }: { wf: Workflow }) {
   return (
-    <div className="fx-grid-2">
+    <div className="grid gap-4 lg:grid-cols-2">
       <Panel title={<h2>Instance input</h2>} kicker="workflow.input">
         <JsonView value={wf.input} collapsed={false} />
-        <p className="fx-note fx-note--warn">
+        <p className="mt-3 text-xs text-st-warn">
           Step <em>outputs</em> are not persisted or exposed by the engine, so only the instance input and the
           frozen definition snapshot are shown. Recording per-step output is a documented backend follow-up.
         </p>
       </Panel>
       <Panel title={<h2>Definition snapshot</h2>} kicker="frozen at creation">
         <JsonView value={wf.def_snapshot} collapsed={false} />
-        <p className="fx-note">The engine stamps this snapshot when the instance is created, so a later re-registration of the definition never rewrites a running workflow’s steps.</p>
+        <p className="mt-3 text-xs text-muted-foreground">The engine stamps this snapshot when the instance is created, so a later re-registration of the definition never rewrites a running workflow’s steps.</p>
       </Panel>
     </div>
   );
@@ -676,24 +757,24 @@ function TracesTab({ id }: { id: string | undefined }) {
   }, [events.data]);
 
   return (
-    <Panel bodyClass="fx-panel__body--flush">
+    <Panel bodyClass="p-5">
       {events.isLoading && <LoadingRows rows={3} />}
-      {events.isError && <div style={{ padding: 16 }}><ErrorState error={events.error} /></div>}
+      {events.isError && <ErrorState error={events.error} />}
       {!events.isLoading && (
-        <div className="fx-traces">
-          <p className="fx-note">
-            There is no distributed-trace backend (gap G7). The identifiers below are the real <code className="mono">trace_id</code> values
+        <div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            There is no distributed-trace backend (gap G7). The identifiers below are the real <code className="font-mono">trace_id</code> values
             the engine already stamped on this workflow’s audit rows — shown for correlation, not as a full trace tree.
           </p>
           {traces.length === 0 ? (
             <EmptyState title="No trace identifiers stamped" hint="Audit rows for this workflow carry no trace_id." />
           ) : (
-            <ul className="fx-traces__list">
+            <ul className="flex flex-col divide-y divide-border/40">
               {traces.map(([tid, m]) => (
-                <li key={tid} className="fx-traces__row">
+                <li key={tid} className="flex flex-wrap items-center gap-3 py-2 text-sm">
                   <CopyChip value={tid} label={truncate(tid, 28)} />
-                  <span className="fx-dim">{m.count} event{m.count === 1 ? "" : "s"}</span>
-                  <span className="fx-dim mono">last <TimeText iso={m.last} timeOnly /></span>
+                  <span className="text-xs text-muted-foreground">{m.count} event{m.count === 1 ? "" : "s"}</span>
+                  <span className="font-mono text-xs text-muted-foreground">last <TimeText iso={m.last} timeOnly /></span>
                 </li>
               ))}
             </ul>
@@ -711,21 +792,23 @@ function DetailsPanel({ wf, onViewIO }: { wf: Workflow; onViewIO: () => void }) 
   const current = wf.steps.find((s) => !DONE.has(s.state)) ?? wf.steps[wf.steps.length - 1];
   return (
     <Panel title={<h2>Workflow details</h2>} kicker="live detail">
-      <dl className="fx-meta-list">
-        <div><span className="fx-meta-k">ID</span><span className="fx-meta-v"><CopyChip value={wf.id} label={`${truncate(wf.id, 18)}…`} /></span></div>
-        <div><span className="fx-meta-k">Status</span><span className="fx-meta-v"><StatusBadge state={wf.state} /></span></div>
-        <div><span className="fx-meta-k">Definition</span><span className="fx-meta-v">{wf.def_name} · v{wf.def_version}</span></div>
-        <div><span className="fx-meta-k">Business key</span><span className="fx-meta-v mono">{wf.business_key}</span></div>
-        <div><span className="fx-meta-k">Current step</span><span className="fx-meta-v mono">{current ? current.step_type : "—"}</span></div>
-        <div><span className="fx-meta-k">Version</span><span className="fx-meta-v num">{wf.version}</span></div>
-        <div><span className="fx-meta-k">Started</span><span className="fx-meta-v"><TimeText iso={wf.started_at} /></span></div>
-        <div><span className="fx-meta-k">Duration</span><span className="fx-meta-v">{span !== null ? humanDuration(span) : "—"}</span></div>
-        <div><span className="fx-meta-k">Deadline</span><span className="fx-meta-v"><TimeText iso={wf.deadline_at} /></span></div>
-        <div><span className="fx-meta-k">Updated</span><span className="fx-meta-v"><RelTime iso={wf.updated_at} /></span></div>
-      </dl>
-      <button type="button" className="btn btn-sm fx-details__json" onClick={onViewIO}>
-        <IconJson size={13} /> View input &amp; definition
-      </button>
+      <MetaList
+        rows={[
+          ["ID", <CopyChip value={wf.id} label={`${truncate(wf.id, 18)}…`} />],
+          ["Status", <StatusBadge state={wf.state} />],
+          ["Definition", `${wf.def_name} · v${wf.def_version}`],
+          ["Business key", <span className="font-mono">{wf.business_key}</span>],
+          ["Current step", <span className="font-mono">{current ? current.step_type : "—"}</span>],
+          ["Version", <span className="font-mono tabular-nums">{wf.version}</span>],
+          ["Started", <TimeText iso={wf.started_at} />],
+          ["Duration", span !== null ? humanDuration(span) : "—"],
+          ["Deadline", <TimeText iso={wf.deadline_at} />],
+          ["Updated", <RelTime iso={wf.updated_at} />],
+        ]}
+      />
+      <Button variant="outline" size="sm" className="mt-4" onClick={onViewIO}>
+        <Braces className="size-3.5" /> View input &amp; definition
+      </Button>
     </Panel>
   );
 }
@@ -755,24 +838,24 @@ function ActionPanel({ id, state, version }: { id: string; state: string; versio
 
   return (
     <Panel title={<h2>Operator actions</h2>} kicker={`guarded by version ${version}`}>
-      <div className="fx-actions">
-        <button type="button" className="btn btn-sm" disabled={cancelDisabled} onClick={() => setConfirm("cancel")}>
-          <IconCancel size={13} /> Cancel workflow
-        </button>
-        <button type="button" className="btn btn-sm" disabled={retryDisabled} onClick={() => setConfirm("retry-now")}>
-          <IconRefresh size={13} /> Retry now
-        </button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" disabled={cancelDisabled} onClick={() => setConfirm("cancel")}>
+          <CircleSlash className="size-3.5" /> Cancel workflow
+        </Button>
+        <Button variant="outline" size="sm" disabled={retryDisabled} onClick={() => setConfirm("retry-now")}>
+          <RefreshCw className="size-3.5" /> Retry now
+        </Button>
       </div>
-      <p className="fx-hintpick">{confirm === "retry-now" ? retryHint : cancelHint}</p>
-      <p className="fx-note">
-        The engine exposes no pause or priority control, so neither is offered. Both verbs send <code className="mono">version: {version}</code>;
+      <p className="mt-2 text-xs text-muted-foreground">{confirm === "retry-now" ? retryHint : cancelHint}</p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        The engine exposes no pause or priority control, so neither is offered. Both verbs send <code className="font-mono">version: {version}</code>;
         if the engine advanced first, the write answers 409 and re-reads before you retry.
       </p>
 
       {confirm && (
         <ConfirmAction
           title={confirm === "cancel" ? "Cancel this workflow" : "Force an immediate retry"}
-          target={<span>workflow <code className="mono">{truncate(id, 18)}…</code> · currently <StatusBadge state={state} size="sm" /></span>}
+          target={<span>workflow <code className="font-mono">{truncate(id, 18)}…</code> · currently <StatusBadge state={state} size="sm" /></span>}
           consequence={
             confirm === "cancel"
               ? "Forward progress stops; completed compensable steps are rolled back. This is recorded as an operator transition."
@@ -795,7 +878,9 @@ function ActionPanel({ id, state, version }: { id: string; state: string; versio
           }
         />
       )}
-      <Link to={`/events?workflow=${id}`} className="btn btn-ghost btn-sm fx-actionlink"><IconLogs size={13} /> Open full event ledger</Link>
+      <Button asChild variant="ghost" size="sm" className="mt-3">
+        <Link to={`/events?workflow=${id}`}><ScrollText className="size-3.5" /> Open full event ledger</Link>
+      </Button>
     </Panel>
   );
 }
@@ -812,14 +897,20 @@ function RelatedDeadLetterBar({ id }: { id: string | undefined }) {
   const n = items.length;
   const newest = items[0];
   return (
-    <Link to="/dlq" className={`fx-dlqbar ${n > 0 ? "fx-dlqbar--on" : ""}`}>
-      <span className="fx-dlqbar__icon" aria-hidden="true"><IconDeadLetter size={16} /></span>
-      <span className="fx-dlqbar__label">Related dead letter / manual interventions</span>
-      <span className="fx-dlqbar__count num" aria-label={`${n} open`}>{dlq.isLoading ? "…" : n}</span>
-      {n > 0 && newest && (
-        <span className="fx-dlqbar__hint mono" title={newest.reason_code}>{newest.class} · {newest.reason_code}</span>
+    <Link
+      to="/dlq"
+      className={cn(
+        "mt-4 flex flex-wrap items-center gap-3 rounded-xl border px-5 py-3 text-sm transition-colors",
+        n > 0 ? "border-st-manual/40 bg-st-manual/5 hover:bg-st-manual/10" : "border-border/60 bg-card hover:bg-accent/40",
       )}
-      <span className="fx-dlqbar__cta">Open centre <IconChevronRight size={14} /></span>
+    >
+      <Inbox className={cn("size-4", n > 0 ? "text-st-manual" : "text-muted-foreground")} aria-hidden="true" />
+      <span className="font-medium text-foreground">Related dead letter / manual interventions</span>
+      <span className="font-mono font-semibold tabular-nums" aria-label={`${n} open`}>{dlq.isLoading ? "…" : n}</span>
+      {n > 0 && newest && (
+        <span className="font-mono text-xs text-muted-foreground" title={newest.reason_code}>{newest.class} · {newest.reason_code}</span>
+      )}
+      <span className="ml-auto inline-flex items-center gap-1 text-primary">Open centre <ChevronRight className="size-3.5" /></span>
     </Link>
   );
 }
