@@ -357,8 +357,9 @@ them in order, and only the final tree was gated. An intermediate commit is not
 guaranteed to build on its own, because screens and the kit they import landed
 in separate commits.
 
-This report is committed as `PHASE_8_REPORT` — pinned by the follow-up commit
-that records its own hash, the same way Phase 7 closed out.
+This report landed as `0e91f68`. The commit you are reading this line in is the
+follow-up that pins it — a commit cannot contain its own hash, the same way
+Phase 7 closed out.
 
 Working tree after Phase 8: clean, with `.artifacts/` (screenshots, probes,
 reference image) git-ignored as designed.
