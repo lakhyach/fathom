@@ -69,6 +69,14 @@ export function Workflows() {
   }, [metrics.data]);
   const censusTotal = [...countByState.values()].reduce((a, b) => a + b, 0);
 
+  // definition mix of the LOADED page only — the keyset API has no total
+  // count, so the ledger footer states exactly what these rows contain.
+  const defMix = useMemo(() => {
+    const m = new Map<string, number>();
+    if (list.data) for (const w of list.data.items) m.set(w.def_name, (m.get(w.def_name) ?? 0) + 1);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [list.data]);
+
   const applyKeyFilter = (value: string) => {
     const next = new URLSearchParams(params);
     if (value.trim()) next.set("business_key", value.trim());
@@ -92,7 +100,7 @@ export function Workflows() {
           <h1>Workflows</h1>
           <p className="fx-page-sub">
             Newest first, keyed by UUIDv7 time ordering. Filters are exact-match — the backend
-            offers no fuzzy search, so none is faked here.
+            offers no fuzzy search.
           </p>
         </div>
         <div className="fx-page-head__side">
@@ -195,7 +203,7 @@ export function Workflows() {
                       {truncate(w.id, 20)}…
                     </Link>
                     <span onClick={(e) => e.stopPropagation()}>
-                      <CopyChip value={w.id} label="id" />
+                      <CopyChip value={w.id} bare />
                     </span>
                   </td>
                   <td>
@@ -231,6 +239,19 @@ export function Workflows() {
               onPrev={() => pages.pop()}
               onNext={() => list.data!.next_cursor && pages.push(list.data!.next_cursor)}
             />
+          </div>
+        )}
+        {hasRow && (
+          <div className="fx-ledger">
+            <span className="fx-ledger__k">Definition mix on this page</span>
+            {defMix.map(([d, n]) => (
+              <span key={d} className="fx-ledger__chip">
+                {d} <b className="num">×{n}</b>
+              </span>
+            ))}
+            <span className="fx-ledger__n">
+              page shows {list.data!.items.length} workflow{list.data!.items.length === 1 ? "" : "s"} · newest first
+            </span>
           </div>
         )}
       </Panel>

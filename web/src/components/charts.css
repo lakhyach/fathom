@@ -180,12 +180,18 @@
   align-items: center;
   gap: var(--fx-sp-1);
 }
+/* Rendered a touch larger than the 80-unit viewBox so the in-ring value
+   ("6h 59m") keeps clear air around the stroke at any label length. */
+.fx-gauge svg {
+  width: 88px;
+  height: 88px;
+}
 .fx-gauge__arc {
   transition: stroke-dasharray var(--fx-dur-slow) var(--fx-ease);
 }
 .fx-gauge__text {
   font-family: var(--fx-font-ui);
-  font-size: 15px;
+  font-size: 11.5px;
   font-weight: 640;
   fill: var(--fx-ink);
 }

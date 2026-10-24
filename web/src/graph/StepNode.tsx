@@ -63,6 +63,7 @@ export function StepNode({ data }: NodeProps<StepFlowNode>) {
             <IconUndo size={12} />
           </span>
         )}
+        {compensating && <span className="fx-node__rollback" title="compensation in flight">rolling back</span>}
       </div>
 
       <div className="fx-node__foot">
@@ -75,7 +76,6 @@ export function StepNode({ data }: NodeProps<StepFlowNode>) {
             <IconLease size={11} />
           </span>
         )}
-        {compensating && <span className="fx-node__rollback">rolling back</span>}
       </div>
     </div>
   );

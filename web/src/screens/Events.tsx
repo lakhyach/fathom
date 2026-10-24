@@ -16,6 +16,7 @@ import {
   LoadingRows,
   Pager,
   Panel,
+  RelTime,
   SnapshotAt,
   StatusBadge,
   TimeText,
@@ -95,18 +96,27 @@ export function Events() {
         </div>
         <div className="fx-quickpick">
           <span className="kicker">Recent</span>
-          {(recent.data?.items ?? []).map((w) => (
-            <button
-              key={w.id}
-              type="button"
-              className={`fx-chip ${w.id === wf ? "fx-chip--on" : ""}`}
-              onClick={() => pickWorkflow(w.id)}
-              title={w.id}
-            >
-              <span className={`fx-dot fx-dot--${workflowStatus(w.state).tone}`} aria-hidden="true" />
-              <span className="mono">{truncate(w.business_key || w.id, 22)}</span>
-            </button>
-          ))}
+          <div className="fx-picks">
+            {(recent.data?.items ?? []).map((w) => (
+              <button
+                key={w.id}
+                type="button"
+                className={`fx-pick ${w.id === wf ? "fx-pick--on" : ""}`}
+                onClick={() => pickWorkflow(w.id)}
+                title={w.id}
+              >
+                <span className="fx-pick__top">
+                  <span className="fx-pick__def">{w.def_name}</span>
+                  <span className={`fx-dot fx-dot--${workflowStatus(w.state).tone}`} aria-hidden="true" />
+                </span>
+                <span className="fx-pick__key mono">{truncate(w.business_key || w.id, 24)}</span>
+                <span className="fx-pick__foot">
+                  <span>{workflowStatus(w.state).label}</span>
+                  <RelTime iso={w.updated_at} />
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </Panel>
 

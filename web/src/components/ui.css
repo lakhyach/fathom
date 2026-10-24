@@ -119,6 +119,19 @@
   border-color: var(--fx-line-strong);
   color: var(--fx-ink);
 }
+/* Bare = icon-only ghost button (table cells): the value lives in the cell's
+   own text, so a second bordered chip there was visual noise. */
+.fx-copy--bare {
+  padding: 2px 5px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--fx-ink-faint);
+}
+.fx-copy--bare:hover {
+  border-color: var(--fx-line);
+  background: var(--fx-inset);
+  color: var(--fx-ink);
+}
 .fx-copy__ok {
   color: var(--fx-st-completed);
 }

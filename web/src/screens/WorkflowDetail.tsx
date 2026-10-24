@@ -319,7 +319,7 @@ function GraphPanel({ nodes, edges, steps, wf, updatedAt, chosen, onPick }: {
           nodeTypes={nodeTypes}
           onNodeClick={(_, n) => onPick(n.id)}
           fitView
-          fitViewOptions={{ padding: 0.22, maxZoom: 1.35 }}
+          fitViewOptions={{ padding: 0.16, maxZoom: 1.75 }}
           minZoom={0.4}
           nodesDraggable={false}
           nodesConnectable={false}

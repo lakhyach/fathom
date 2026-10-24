@@ -130,9 +130,15 @@
   color: var(--fx-st-running);
 }
 .fx-node__rollback {
-  margin-left: auto;
+  flex: none;
   color: var(--fx-st-compensating);
   font-weight: 600;
+  font-size: var(--fx-fs-micro);
+  white-space: nowrap;
+  padding: 1px 7px;
+  border-radius: var(--fx-r-pill);
+  background: color-mix(in oklch, var(--fx-st-compensating) 12%, transparent);
+  border: var(--fx-hair) solid color-mix(in oklch, var(--fx-st-compensating) 38%, transparent);
 }
 
 /* running nodes breathe; reduced-motion kills it (global rule in tokens.css) */

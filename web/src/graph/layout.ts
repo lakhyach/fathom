@@ -11,7 +11,7 @@ import { MarkerType, type Edge, type Node } from "@xyflow/react";
 import { stepStatus, toneVar } from "../theme/status";
 import type { StepView } from "../api/types";
 
-export const NODE_W = 188;
+export const NODE_W = 216;
 export const NODE_H = 74;
 const GAP_X = 74;
 const ORIGIN_X = 24;

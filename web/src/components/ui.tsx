@@ -216,7 +216,7 @@ export function humanDuration(ms: number | null): string {
 
 /* -------------------------------- copy ---------------------------------- */
 
-export function CopyChip({ value, label }: { value: string; label?: string }) {
+export function CopyChip({ value, label, bare = false }: { value: string; label?: string; bare?: boolean }) {
   const [done, setDone] = useState(false);
   const onCopy = useCallback(() => {
     navigator.clipboard?.writeText(value).then(() => {
@@ -225,8 +225,8 @@ export function CopyChip({ value, label }: { value: string; label?: string }) {
     });
   }, [value]);
   return (
-    <button type="button" className="fx-copy mono" onClick={onCopy} title="Copy to clipboard">
-      {label ?? truncate(value, 34)}
+    <button type="button" className={`fx-copy mono${bare ? " fx-copy--bare" : ""}`} onClick={onCopy} title="Copy to clipboard">
+      {!bare && (label ?? truncate(value, 34))}
       {done ? <IconCheck size={12} className="fx-copy__ok" /> : <IconCopy size={12} />}
       <span className="sr-only">{done ? "Copied" : "Copy"}</span>
     </button>
