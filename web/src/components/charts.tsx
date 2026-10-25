@@ -11,7 +11,6 @@ import { useMemo } from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   Cell,
   Pie,
   PieChart,
@@ -55,176 +54,6 @@ export function ChartLegend({
         </li>
       ))}
     </ul>
-  );
-}
-
-/* -------------------------- placement trend chart ------------------------- */
-
-export interface TrendPoint {
-  t: number;
-  label: string;
-  completed: number;
-  negative: number;
-  open: number;
-  total: number;
-}
-
-/** Stacked placement volume per bucket, split by outcome. Fed exclusively by
- *  rows the cursor walk actually returned. `fill` lets the chart grow into a
- *  stretched panel instead of leaving dead space under a fixed-height plot. */
-export function TrendChart({
-  points,
-  height = 268,
-  fill = false,
-}: {
-  points: TrendPoint[];
-  height?: number;
-  fill?: boolean;
-}) {
-  const aria = `Placements per bucket: ${points.map((p) => `${p.label} ${p.total}`).join(", ")}`;
-  return (
-    <div
-      className={fill ? "min-h-[220px] flex-1" : undefined}
-      style={fill ? { width: "100%" } : { width: "100%", height }}
-      role="img"
-      aria-label={aria}
-    >
-      <ResponsiveContainer width="100%" height={fill ? "100%" : height}>
-        <BarChart
-          data={points}
-          margin={{ top: 10, right: 6, bottom: 0, left: -22 }}
-          barCategoryGap="24%"
-        >
-          <defs>
-            <linearGradient id="trend-completed" x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor="var(--st-completed)"
-                stopOpacity={1}
-              />
-              <stop
-                offset="100%"
-                stopColor="var(--st-completed)"
-                stopOpacity={0.42}
-              />
-            </linearGradient>
-            <linearGradient id="trend-negative" x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor="var(--st-negative)"
-                stopOpacity={1}
-              />
-              <stop
-                offset="100%"
-                stopColor="var(--st-negative)"
-                stopOpacity={0.42}
-              />
-            </linearGradient>
-            <linearGradient id="trend-open" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--st-running)" stopOpacity={1} />
-              <stop
-                offset="100%"
-                stopColor="var(--st-running)"
-                stopOpacity={0.42}
-              />
-            </linearGradient>
-          </defs>
-          <CartesianGrid stroke="var(--hairline)" vertical={false} />
-          <XAxis
-            dataKey="label"
-            tickLine={false}
-            axisLine={false}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-            minTickGap={10}
-            interval="preserveStartEnd"
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={40}
-            allowDecimals={false}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-          />
-          <Tooltip
-            cursor={{ fill: "var(--chip)" }}
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null;
-              const p = payload[0].payload as TrendPoint;
-              return (
-                <div className={TIP_CLASS}>
-                  <span className="block font-mono text-[11px] text-muted-foreground">
-                    {p.label}
-                  </span>
-                  <span className="mt-1.5 flex items-center gap-2">
-                    <span className="font-semibold text-foreground tabular-nums">
-                      {p.total}
-                    </span>
-                    <span className="text-muted-foreground">
-                      placement{p.total === 1 ? "" : "s"}
-                    </span>
-                  </span>
-                  <ul className="mt-1.5 flex flex-col gap-1">
-                    {(
-                      [
-                        {
-                          tone: "completed",
-                          label: "Completed",
-                          v: p.completed,
-                        },
-                        {
-                          tone: "negative",
-                          label: "Failed / aborted",
-                          v: p.negative,
-                        },
-                        { tone: "running", label: "Still open", v: p.open },
-                      ] as const
-                    )
-                      .filter((r) => r.v > 0)
-                      .map((r) => (
-                        <li key={r.tone} className="flex items-center gap-2">
-                          <span
-                            className="size-1.5 rounded-full"
-                            style={{ background: toneVar(r.tone) }}
-                            aria-hidden="true"
-                          />
-                          <span className="text-muted-foreground">
-                            {r.label}
-                          </span>
-                          <span className="ml-auto font-mono text-foreground tabular-nums">
-                            {r.v}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              );
-            }}
-          />
-          <Bar
-            dataKey="completed"
-            stackId="o"
-            fill="url(#trend-completed)"
-            maxBarSize={30}
-            animationDuration={420}
-          />
-          <Bar
-            dataKey="negative"
-            stackId="o"
-            fill="url(#trend-negative)"
-            maxBarSize={30}
-            animationDuration={420}
-          />
-          <Bar
-            dataKey="open"
-            stackId="o"
-            fill="url(#trend-open)"
-            maxBarSize={30}
-            radius={[6, 6, 0, 0]}
-            animationDuration={420}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
   );
 }
 
@@ -316,7 +145,7 @@ export function Donut({
             <span className="text-[30px] leading-none font-bold tracking-[-0.03em] text-foreground tabular-nums">
               {total}
             </span>
-            <span className="mt-1.5 text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+            <span className="mt-1.5 text-[11px] text-muted-foreground">
               workflows
             </span>
           </div>

@@ -1,6 +1,8 @@
-/* Nunatak brand mark — the summit rendered as an orchestration graph: two base
-   nodes feed a central coordinator that resolves to the peak. Product identity,
-   not an icon; Phase 8 re-inks it into the reference lime ramp. */
+/* Nunatak brand mark — an alpine nunatak: a two-peak ridge with a lit snow cap
+   over a shaded body. One geometry is shared by the rail, the favicon and every
+   web-app icon, so the product identity is the same shape at 16px and 26px.
+   The gradient runs through CSS variables in the app and through literal hex in
+   the standalone favicon, where no stylesheet is attached. */
 import type { SVGProps } from "react";
 
 export function NunatakMark({
@@ -16,45 +18,25 @@ export function NunatakMark({
       aria-hidden="true"
       {...rest}
     >
-      <g
-        fill="none"
-        stroke="url(#nunatakmark)"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M16 8 24 16 16 24 8 16 16 8Z" />
-        <path
-          d="M16 8v5M16 19v5M8 16h5M19 16h5"
-          strokeWidth="1.8"
-          opacity="0.5"
-        />
-      </g>
-      <g fill="url(#nunatakmark)">
-        <circle cx="16" cy="8" r="2.7" />
-        <circle cx="8" cy="16" r="2.2" />
-        <circle cx="24" cy="16" r="2.2" />
-        <circle cx="16" cy="24" r="2.2" />
-      </g>
-      <circle
-        cx="16"
-        cy="16"
-        r="2"
-        fill="none"
-        stroke="url(#nunatakmark)"
-        strokeWidth="1.8"
+      <path
+        d="M2.6 26.2 11.6 8.2l4.8 8.9 3.3-5.7 9.7 14.8z"
+        fill="url(#nunatak-body)"
+      />
+      <path
+        d="M11.6 8.2 8.7 14.3l2.9-1 2.6 2.1z"
+        fill="var(--lime-bright, #aee762)"
       />
       <defs>
         <linearGradient
-          id="nunatakmark"
+          id="nunatak-body"
           x1="6"
-          y1="6"
+          y1="9"
           x2="26"
-          y2="26"
+          y2="27"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="var(--lime-bright)" />
-          <stop offset="1" stopColor="var(--primary)" />
+          <stop stopColor="var(--primary, #67c352)" />
+          <stop offset="1" stopColor="var(--moss, #40913d)" />
         </linearGradient>
       </defs>
     </svg>

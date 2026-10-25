@@ -74,6 +74,255 @@ export function bucketLabel(
   }).format(d);
 }
 
+/* ------------------------- the honest time plane ------------------------- */
+
+/** Minimum span an axis may show, so a single placement never stretches a
+ *  full-width bar with no context around it. */
+const MIN_AXIS_MS = 60 * 60_000;
+
+export interface TimePlane {
+  /** left edge of the axis, in epoch ms */
+  from: number;
+  /** right edge of the axis, in epoch ms */
+  to: number;
+  /** epoch ms of the newest real mark, or null when the window is empty */
+  last: number | null;
+  /** true → the axis was fitted to the marks that exist rather than showing
+   *  the whole selected range. The caller says so on screen. */
+  fitted: boolean;
+  /** epoch ms the selected range actually started at */
+  windowStart: number;
+  spanMs: number;
+}
+
+/** Marks are the timestamps the ledger really carries: every created_at, every
+ *  finished_at, and "now" for anything still open. The axis is fitted to that
+ *  set (padded, never beyond now) instead of to the nominal range — the old
+ *  fixed daily buckets made a two-day cluster read as one lonely bar. */
+export function timePlane(
+  rows: readonly WorkflowSummary[],
+  opts: { rangeMs: number; now?: number },
+): TimePlane {
+  const now = opts.now ?? Date.now();
+  const windowStart = now - opts.rangeMs;
+  const marks: number[] = [];
+  for (const r of rows) {
+    const c = Date.parse(r.created_at);
+    if (Number.isFinite(c) && c >= windowStart && c <= now) marks.push(c);
+    if (r.finished_at) {
+      const f = Date.parse(r.finished_at);
+      if (Number.isFinite(f) && f >= windowStart && f <= now) marks.push(f);
+    } else if (Number.isFinite(c) && c >= windowStart) {
+      marks.push(now);
+    }
+  }
+  if (marks.length === 0) {
+    return {
+      from: windowStart,
+      to: now,
+      last: null,
+      fitted: false,
+      windowStart,
+      spanMs: now - windowStart,
+    };
+  }
+  let first = Math.min(...marks);
+  let last = Math.max(...marks);
+  if (last - first < MIN_AXIS_MS) {
+    const mid = (first + last) / 2;
+    first = mid - MIN_AXIS_MS / 2;
+    last = mid + MIN_AXIS_MS / 2;
+  }
+  const raw = last - first;
+  const pad = Math.max(2 * 60_000, raw * 0.04);
+  const from = Math.max(windowStart - pad, first - pad);
+  const to = Math.min(now + pad, last + pad);
+  const full = opts.rangeMs;
+  return {
+    from,
+    to,
+    last,
+    fitted: to - from < full * 0.9,
+    windowStart,
+    spanMs: to - from,
+  };
+}
+
+/** Even tick times across a fitted axis: rounded unit steps, real clock values. */
+export function axisTicks(
+  plane: TimePlane,
+  count = 6,
+): Array<{ t: number; label: string }> {
+  const span = plane.to - plane.from;
+  if (span <= 0) return [];
+  const unit = 10 * 60_000;
+  const rough = span / count;
+  const step =
+    [
+      unit,
+      2 * unit,
+      5 * unit,
+      15 * unit,
+      30 * unit,
+      3600_000,
+      3 * 3600_000,
+      6 * 3600_000,
+      12 * 3600_000,
+      864e5,
+    ].find((s) => s >= rough) ?? 864e5;
+  const first = Math.ceil(plane.from / step) * step;
+  const out: Array<{ t: number; label: string }> = [];
+  for (let t = first; t <= plane.to; t += step)
+    out.push({ t, label: bucketLabel(t, span, false) });
+  return out;
+}
+
+export interface Track {
+  id: string;
+  def: string;
+  key: string;
+  state: string;
+  outcome: Outcome;
+  created: number;
+  updated: number;
+  /** finished_at for terminal rows, the snapshot moment for open ones */
+  end: number;
+  open: boolean;
+  /** true when the row was placed before the axis began */
+  before: boolean;
+}
+
+/** One row per placement — the ledger itself, so a seven-workflow fleet renders
+ *  as seven real spans instead of two bars in an empty field. */
+export function timelineTracks(
+  rows: readonly WorkflowSummary[],
+  plane: TimePlane,
+  now = Date.now(),
+): Track[] {
+  const out: Track[] = [];
+  for (const r of rows) {
+    const created = Date.parse(r.created_at);
+    if (!Number.isFinite(created)) continue;
+    const finished = r.finished_at ? Date.parse(r.finished_at) : Number.NaN;
+    const updated = Date.parse(r.updated_at);
+    const open = Number.isNaN(finished);
+    out.push({
+      id: r.id,
+      def: r.def_name,
+      key: r.business_key,
+      state: r.state,
+      outcome: outcomeOf(r.state),
+      created,
+      updated: Number.isFinite(updated) ? updated : created,
+      end: open ? now : finished,
+      open,
+      before: created < plane.from,
+    });
+  }
+  return out.sort((a, b) => b.created - a.created);
+}
+
+/* ----------------------------- activity matrix ----------------------------- */
+
+export type CellKind =
+  /** the row did not exist yet in this slot */
+  | "none"
+  /** created_at falls in this slot */
+  | "placed"
+  /** in flight across this slot (open lifecycle) */
+  | "inflight"
+  /** the ledger row last moved inside an already-open lifecycle */
+  | "progressed"
+  | "completed"
+  | "negative"
+  | "manual"
+  /** terminal, and nothing happened since */
+  | "settled"
+  /** the cursor walk did not reach this slot */
+  | "uncovered";
+
+export interface MatrixCell {
+  kind: CellKind;
+  from: number;
+  to: number;
+  /** the workflow's own state, when the cell says something about it */
+  state: string | null;
+}
+
+export interface MatrixRow {
+  id: string;
+  def: string;
+  key: string;
+  state: string;
+  created: number;
+  updated: number;
+  finished: number | null;
+  cells: MatrixCell[];
+}
+
+/** Columns × placements: what the ledger really recorded for each workflow in
+ *  each slot. `updated_at` only ever proves "the row moved", never a step
+ *  boundary, so it is drawn as a distinct class rather than a fake event. */
+export function activityMatrix(
+  rows: readonly WorkflowSummary[],
+  opts: { plane: TimePlane; columns: number; covered: boolean; now?: number },
+): MatrixRow[] {
+  const now = opts.now ?? Date.now();
+  const { from, to } = opts.plane;
+  const width = (to - from) / opts.columns;
+  if (width <= 0) return [];
+  const colOf = (t: number) =>
+    Math.max(0, Math.min(opts.columns - 1, Math.floor((t - from) / width)));
+  return timelineTracks(rows, opts.plane, now)
+    .slice(0, 8)
+    .map((tr) => {
+      const cCreated = colOf(tr.created);
+      const cFinished = tr.open ? -1 : colOf(tr.end);
+      const cUpdated = colOf(tr.updated);
+      const cells: MatrixCell[] = Array.from(
+        { length: opts.columns },
+        (_, i) => {
+          const start = from + i * width;
+          const end = start + width;
+          const uncovered =
+            !opts.covered &&
+            i < cCreated &&
+            start < opts.plane.windowStart &&
+            i < colOf(opts.plane.windowStart);
+          let kind: CellKind;
+          if (uncovered) kind = "uncovered";
+          else if (i < cCreated) kind = "none";
+          else if (i === cCreated) kind = "placed";
+          else if (cFinished >= 0 && i === cFinished)
+            kind =
+              tr.state === "FAILED_MANUAL"
+                ? "manual"
+                : tr.outcome === "completed"
+                  ? "completed"
+                  : "negative";
+          else if (cFinished >= 0 && i > cFinished) kind = "settled";
+          else kind = i === cUpdated ? "progressed" : "inflight";
+          return {
+            kind,
+            from: start,
+            to: end,
+            state: kind === "none" || kind === "uncovered" ? null : tr.state,
+          };
+        },
+      );
+      return {
+        id: tr.id,
+        def: tr.def,
+        key: tr.key,
+        state: tr.state,
+        created: tr.created,
+        updated: tr.updated,
+        finished: tr.open ? null : tr.end,
+        cells,
+      };
+    });
+}
+
 export interface Duration {
   id: string;
   label: string;
