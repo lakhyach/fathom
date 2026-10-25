@@ -84,6 +84,65 @@
   /* ---- surfaces, sampled from the reference ------------------------------ */
   /* atmosphere: the forest the frame floats on (#2a3726 at its lit corner) */
   --atmosphere: oklch(0.319 0.034 138);
+  /* atmosphere-deep: the dark END of the field. It doubles as the page's
+     fallback paint, so an area the field does not reach reads as deep forest
+     shadow rather than as a bright band stranded under the frame. */
+  --atmosphere-deep: oklch(0.132 0.021 146);
+  /* The whole ambient composition lives in one property so the fixed canvas
+     layer and any element that needs the field share a single definition.
+     Layer order is top-down: vignette, three diagonal streaks, the glow the
+     frame sits in, two green reflections off the frame, then the base field. */
+  --atmosphere-field:
+    radial-gradient(
+      132% 118% at 50% 44%,
+      transparent 40%,
+      oklch(0.075 0.016 148 / 72%) 100%
+    ),
+    linear-gradient(
+      118deg,
+      transparent 0 15%,
+      oklch(0.95 0.13 130 / 17%) 21%,
+      transparent 27% 100%
+    ),
+    linear-gradient(
+      118deg,
+      transparent 0 24%,
+      oklch(0.93 0.13 132 / 15%) 33%,
+      transparent 42% 100%
+    ),
+    linear-gradient(
+      118deg,
+      transparent 0 40%,
+      oklch(0.96 0.1 128 / 11%) 49%,
+      transparent 58% 100%
+    ),
+    linear-gradient(
+      124deg,
+      transparent 0 62%,
+      oklch(0.88 0.12 133 / 7%) 70%,
+      transparent 79% 100%
+    ),
+    radial-gradient(
+      92% 64% at 50% -10%,
+      oklch(0.62 0.17 136 / 38%),
+      transparent 68%
+    ),
+    radial-gradient(
+      52% 44% at 6% 92%,
+      oklch(0.44 0.11 138 / 30%),
+      transparent 72%
+    ),
+    radial-gradient(
+      64% 30% at 50% 104%,
+      oklch(0.5 0.12 137 / 18%),
+      transparent 74%
+    ),
+    linear-gradient(
+      150deg,
+      var(--atmosphere) 0%,
+      oklch(0.24 0.033 142) 44%,
+      var(--atmosphere-deep) 100%
+    );
   /* canvas: the frame interior (#090e08) — near-black with a green cast */
   --canvas: oklch(0.156 0.015 140);
   --background: var(--canvas);
@@ -178,7 +237,12 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-atmosphere text-foreground font-sans antialiased;
+    /* The fallback field is the DARK end on purpose. Body used to carry the
+       flat mid-green --atmosphere, and the moment the painted canvas outgrew
+       the element that drew the gradient, that flat colour showed through as
+       an unexplained green band under the frame. */
+    @apply text-foreground font-sans antialiased;
+    background-color: var(--atmosphere-deep);
     /* Outfit is wider than a neo-grotesque; a hair of negative tracking keeps
        dense UI copy compact without making small labels look cramped. */
     font-size: 14px;
@@ -186,6 +250,20 @@
     letter-spacing: -0.006em;
     font-feature-settings: "ss01";
     min-height: 100dvh;
+  }
+  /* The ambient field lives on a fixed layer sized to the visual viewport, not
+     on the shell box. A viewport-unit box (h-dvh) can end above the canvas it
+     is supposed to cover — collapsing URL bar, pinch zoom, overscroll, a
+     full-size capture, or any document taller than the shell — and the
+     remainder used to paint as a stray strip. A fixed layer cannot be
+     outgrown, so the surround is always the composed field. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: var(--atmosphere-field);
   }
   h1,
   h2,
@@ -232,47 +310,21 @@
    Surface recipes — the ONE card language of the app.
    ========================================================================== */
 
-/* The immersive backdrop: a forest-green field lit from the upper left. The
-   reference's diagonal rays are reproduced as three wide bands at deliberately
-   different angles, each bright enough to read only where the light falls —
-   a repeating pattern was what made the previous pass look like tiled CSS. */
-@utility surface-atmosphere {
-  background:
-    radial-gradient(
-      130% 110% at 50% 44%,
-      transparent 46%,
-      oklch(0.105 0.02 146 / 52%) 100%
-    ),
-    linear-gradient(
-      112deg,
-      transparent 0 12%,
-      oklch(0.94 0.11 130 / 11%) 20%,
-      transparent 29% 100%
-    ),
-    linear-gradient(
-      124deg,
-      transparent 0 36%,
-      oklch(0.96 0.09 128 / 8%) 44%,
-      transparent 53% 100%
-    ),
-    linear-gradient(
-      106deg,
-      transparent 0 60%,
-      oklch(0.9 0.12 132 / 6%) 67%,
-      transparent 75% 100%
-    ),
-    radial-gradient(
-      135% 110% at 4% -14%,
-      oklch(0.5 0.085 133 / 92%),
-      transparent 64%
-    ),
-    linear-gradient(
-      150deg,
-      var(--atmosphere) 0%,
-      oklch(0.26 0.032 141) 46%,
-      oklch(0.17 0.022 146) 100%
-    );
+/* The shell box is deliberately VIEWPORT-BOUNDED, not merely viewport-minimum:
+   a definite height is what lets the inner content region scroll instead of
+   inflating the document and pushing the frame past the canvas. It no longer
+   carries the ambient field — that moved to the fixed body layer — so being
+   shorter than the canvas can no longer strand a flat strip. */
+@utility shell-viewport {
+  height: 100vh;
+  height: 100dvh;
 }
+
+/* The ambient field is drawn once, on the fixed body layer, from
+   --atmosphere-field. The reference's diagonal rays enter at the upper centre
+   and run down to the right as three wide bands at deliberately different
+   angles and widths, each bright enough to read only where the light falls —
+   a repeating pattern is what made an earlier pass look like tiled CSS. */
 
 /* The application frame: a large near-black panel floating on the atmosphere,
    carrying the reference's directional green interior glow from its top-left. */
@@ -280,24 +332,35 @@
   background:
     linear-gradient(
       118deg,
-      transparent 0 6%,
-      oklch(0.86 0.14 133 / 7%) 12%,
-      transparent 19% 100%
+      transparent 0 14%,
+      oklch(0.9 0.15 132 / 9%) 20%,
+      transparent 26% 100%
+    ),
+    linear-gradient(
+      118deg,
+      transparent 0 26%,
+      oklch(0.86 0.14 133 / 9%) 35%,
+      transparent 45% 100%
     ),
     linear-gradient(
       126deg,
-      transparent 0 18%,
-      oklch(0.86 0.14 133 / 4.5%) 24%,
-      transparent 31% 100%
+      transparent 0 48%,
+      oklch(0.86 0.14 133 / 6%) 57%,
+      transparent 68% 100%
     ),
     radial-gradient(
-      78% 62% at 6% -4%,
-      oklch(0.52 0.13 137 / 26%),
-      transparent 62%
+      84% 52% at 50% -10%,
+      oklch(0.6 0.16 135 / 26%),
+      transparent 68%
     ),
     radial-gradient(
-      46% 40% at 30% 0%,
-      oklch(0.62 0.16 133 / 14%),
+      58% 44% at 4% -2%,
+      oklch(0.52 0.13 137 / 24%),
+      transparent 64%
+    ),
+    radial-gradient(
+      40% 34% at 30% 0%,
+      oklch(0.62 0.16 133 / 12%),
       transparent 70%
     ),
     radial-gradient(

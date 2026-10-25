@@ -163,7 +163,7 @@ export function Shell() {
 
   return (
     <TooltipProvider delayDuration={220}>
-      <div className="surface-atmosphere flex h-dvh items-stretch justify-center p-2.5 sm:p-4 lg:p-8 2xl:p-10">
+      <div className="shell-viewport flex items-stretch justify-center p-2.5 sm:p-4 lg:p-[clamp(1.75rem,5vh,2.75rem)]">
         <a
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-3 focus:py-1.5 focus:text-sm focus:font-semibold focus:text-primary-foreground"
           href="#nunatak-main"
