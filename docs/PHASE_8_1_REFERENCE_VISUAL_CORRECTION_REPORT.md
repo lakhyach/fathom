@@ -385,8 +385,8 @@ Honest caveat on the grouping, carried forward from Phase 8: the commits are lay
 can read them in order, and **only the final tree was gated**. An intermediate commit is not
 guaranteed to build on its own, because screens and the kit they import landed in separate commits.
 
-This report lands as its own commit. The commit you are reading this line in is the follow-up that
-pins it — a commit cannot contain its own hash.
+This report landed as `2c6d479`. The commit you are reading this line in is the follow-up that
+pins it — a commit cannot contain its own hash, the same way Phase 8 closed out.
 
 Working tree after Phase 8.1: clean. `.artifacts/` (screenshots, harnesses, reference image) stays
 git-ignored as designed, and nothing was pushed or deployed.
