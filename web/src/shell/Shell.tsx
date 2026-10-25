@@ -173,7 +173,7 @@ export function Shell() {
 
         <div className="surface-frame flex min-h-0 w-full max-w-[1680px] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
           {/* desktop rail — the reference's slim neutral pill of icons */}
-          <aside className="surface-rail hidden w-[74px] shrink-0 flex-col rounded-[22px] p-2 lg:flex">
+          <aside className="surface-rail hidden w-[68px] shrink-0 flex-col rounded-[22px] p-2 lg:flex">
             <RailContent
               labelled={false}
               onNavigate={() => undefined}
@@ -435,20 +435,22 @@ function RailContent({
   }[engineTone];
   const { pathname } = useLocation();
 
-  const linkClass = (active: boolean) =>
+  const navClass = cn(
+    "group grid size-10 place-items-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+  );
+  const glyphClass = (active: boolean) =>
     cn(
-      "group relative flex items-center gap-3 rounded-[15px] outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring",
-      labelled ? "h-11 w-full pr-3 pl-3 text-sm" : "size-11 justify-center",
+      "grid size-8 place-items-center rounded-full transition-all duration-200",
       active
-        ? "bg-primary font-semibold text-primary-foreground shadow-[0_12px_28px_-10px_oklch(0.735_0.174_140/85%)]"
-        : "text-muted-foreground hover:bg-chip hover:text-foreground",
+        ? "bg-primary text-primary-foreground shadow-[0_10px_22px_-10px_oklch(0.735_0.174_140/95%)]"
+        : "text-muted-foreground/85 group-hover:bg-chip group-hover:text-foreground",
     );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center gap-3 py-1">
       <div className="flex shrink-0 items-center gap-2.5 self-stretch">
-        <div className="grid size-11 shrink-0 place-items-center rounded-[16px] border border-primary/35 bg-primary/10 shadow-[0_0_24px_-6px_oklch(0.735_0.174_140/55%)]">
-          <NunatakMark size={26} />
+        <div className="grid size-11 shrink-0 place-items-center rounded-full border border-primary/45 bg-primary/12 shadow-[0_0_26px_-4px_oklch(0.735_0.174_140/45%)]">
+          <NunatakMark size={24} />
         </div>
         {labelled ? (
           <div className="flex min-w-0 flex-col leading-tight">
@@ -487,18 +489,46 @@ function RailContent({
           const active = end
             ? pathname === to
             : pathname === to || pathname.startsWith(`${to}/`);
-          const linkEl = (
+          const linkEl = labelled ? (
             <NavLink
               to={to}
               end={end}
               onClick={onNavigate}
-              className={linkClass(active)}
+              className={cn(
+                "group flex h-11 w-full items-center gap-3 rounded-[15px] px-2.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                active
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
-              <Icon
-                className="size-5 shrink-0"
-                strokeWidth={active ? 2.3 : 1.9}
-              />
-              {labelled && <span className="truncate">{label}</span>}
+              <span className={glyphClass(active)}>
+                <Icon
+                  className="size-[17px] shrink-0"
+                  strokeWidth={active ? 2.2 : 1.8}
+                />
+              </span>
+              <span
+                className={cn(
+                  "truncate",
+                  active ? "font-semibold text-foreground" : null,
+                )}
+              >
+                {label}
+              </span>
+            </NavLink>
+          ) : (
+            <NavLink
+              to={to}
+              end={end}
+              onClick={onNavigate}
+              className={navClass}
+            >
+              <span className={glyphClass(active)}>
+                <Icon
+                  className="size-[17px] shrink-0"
+                  strokeWidth={active ? 2.2 : 1.8}
+                />
+              </span>
             </NavLink>
           );
           if (labelled) return <span key={to}>{linkEl}</span>;
@@ -548,11 +578,11 @@ function RailContent({
                 type="button"
                 role="status"
                 aria-label={`${engineLabel}. ${detail}`}
-                className="grid size-11 place-items-center rounded-[15px] border border-border/60 bg-canvas/60 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="grid size-10 place-items-center rounded-full border border-border/50 bg-chip outline-none transition-colors hover:border-primary/30 hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span className="relative grid place-items-center">
                   <Gauge
-                    className="size-5 text-muted-foreground"
+                    className="size-[17px] text-muted-foreground"
                     aria-hidden="true"
                   />
                   <span

@@ -16,7 +16,14 @@ import {
 } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router";
-import { Check, Copy, LoaderCircle, TriangleAlert, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Info,
+  LoaderCircle,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -32,6 +39,12 @@ import {
 import { Skeleton } from "./ui/skeleton";
 import { Textarea } from "./ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 import { Toaster } from "./ui/sonner";
 import { toast } from "sonner";
 
@@ -166,6 +179,7 @@ function breakable(s: string) {
 export function Panel({
   title,
   kicker,
+  source,
   actions,
   children,
   className = "",
@@ -175,6 +189,8 @@ export function Panel({
 }: {
   title?: ReactNode;
   kicker?: string;
+  /** the series or endpoint behind this panel — a hover fact, not a headline */
+  source?: string;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -195,14 +211,39 @@ export function Panel({
       {(title || actions) && (
         <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-hairline px-5 py-4">
           <div className="flex min-w-0 basis-auto flex-col gap-1">
+            <div className="flex min-w-0 items-center gap-2">
+              {title && (
+                <div className="truncate text-[15px] leading-none font-semibold text-card-foreground">
+                  {title}
+                </div>
+              )}
+              {source && (
+                <TooltipProvider delayDuration={180}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        tabIndex={0}
+                        aria-label={`Data source: ${source}`}
+                        className="grid size-5 shrink-0 place-items-center rounded-md border border-border/50 bg-chip text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground focus-visible:border-primary/40"
+                      >
+                        <Info className="size-3" aria-hidden="true" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      className="max-w-80 font-mono text-[11px] leading-relaxed"
+                    >
+                      {source}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             {kicker && (
-              <span className="text-[10px] leading-5 font-semibold [overflow-wrap:anywhere] uppercase tracking-[0.16em] text-muted-foreground">
-                {breakable(kicker)}
+              <span className="text-[11px] leading-4 [overflow-wrap:anywhere] text-muted-foreground">
+                {kicker}
               </span>
             )}
-            <div className="truncate text-[15px] leading-none font-semibold text-card-foreground">
-              {title}
-            </div>
           </div>
           {actions && (
             <div className="flex shrink-0 items-center gap-2">{actions}</div>
@@ -313,7 +354,7 @@ export function ChartEmpty({
       className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-canvas/40 px-6 text-center"
       style={{ height }}
     >
-      <span className="text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+      <span className="text-[11px] text-muted-foreground">
         No data in this window
       </span>
       <span className="max-w-md text-sm leading-relaxed text-muted-foreground">
@@ -367,6 +408,8 @@ export function KpiCard({
   value,
   sub,
   icon,
+  visual,
+  accent,
   tone = "neutral",
   index = 0,
   delta,
@@ -375,7 +418,11 @@ export function KpiCard({
   kicker: string;
   value: number | string;
   sub?: ReactNode;
-  icon: ReactNode;
+  icon?: ReactNode;
+  /** per-card mini-visualization built from the same real numbers */
+  visual?: ReactNode;
+  /** this card's own hue — coordinated with, not identical to, its neighbours */
+  accent?: string;
   tone?: StatusTone | "neutral";
   index?: number;
   /** an honest computed comparison, e.g. "3 of 7 terminal" — never a sparkline */
@@ -385,47 +432,10 @@ export function KpiCard({
   const numeric = typeof value === "number";
   const shown = useCountUp(numeric ? (value as number) : 0);
   const tint = tone === "neutral" ? null : TONE[tone];
-  const body = (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        delay: index * 0.05,
-        duration: 0.34,
-        ease: [0.22, 0.61, 0.21, 1],
-      }}
-      className={cn(
-        "surface-card group relative h-full overflow-hidden rounded-[18px] px-4 py-3.5 transition-all duration-300 sm:rounded-[20px] sm:px-5 sm:py-4",
-        "hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[var(--shadow-lift)] motion-reduce:hover:translate-y-0",
-        href && "focus-within:border-primary/40",
-      )}
-    >
-      {/* corner lighting, revealed on hover — the reference's cards catch light
-          rather than grow an outline */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-16 -right-12 size-36 rounded-full bg-primary/18 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
-      />
-      <div className="relative flex items-start justify-between gap-3">
-        <span className="min-w-0 text-[10px] leading-5 font-semibold [overflow-wrap:anywhere] uppercase tracking-[0.16em] text-muted-foreground">
-          {breakable(kicker)}
-        </span>
-        <span
-          className={cn(
-            "grid size-8 shrink-0 place-items-center rounded-[11px] border transition-colors",
-            tint
-              ? cn(
-                  TONE[tone as StatusTone].soft,
-                  TONE[tone as StatusTone].text,
-                  "border-border/40",
-                )
-              : "border-border/70 bg-chip text-muted-foreground",
-          )}
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
-      </div>
+  const glow =
+    accent ?? (tone === "neutral" ? "var(--primary)" : `var(--st-${tone})`);
+  const figure = (
+    <>
       <div className="relative mt-2 text-[26px] leading-none font-bold tracking-[-0.03em] text-foreground tabular-nums sm:mt-2.5 sm:text-[30px]">
         {numeric ? shown.toLocaleString() : value}
       </div>
@@ -444,6 +454,78 @@ export function KpiCard({
         )}
         {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
       </div>
+    </>
+  );
+  const body = (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        delay: index * 0.05,
+        duration: 0.34,
+        ease: [0.22, 0.61, 0.21, 1],
+      }}
+      className={cn(
+        "surface-card group relative h-full overflow-hidden rounded-[18px] px-4 py-3.5 transition-all duration-300 @container sm:rounded-[20px] sm:px-5 sm:py-4",
+        "hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[var(--shadow-lift)] motion-reduce:hover:translate-y-0",
+        href && "focus-within:border-primary/40",
+      )}
+    >
+      {/* each card catches light from its own corner — the reference's cards are
+          lit objects, not outlined ones. Opacity lifts on hover. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.11] transition-opacity duration-500 group-hover:opacity-[0.2]"
+        style={{
+          background: `radial-gradient(115% 130% at 100% 0%, ${glow}, transparent 58%)`,
+        }}
+      />
+      {visual ? (
+        <div className="relative flex flex-col gap-3 @[13rem]:flex-row @[13rem]:items-center @[13rem]:gap-4">
+          <div className="min-w-0 flex-1">
+            <span className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
+              {icon && (
+                <span
+                  aria-hidden="true"
+                  className="shrink-0"
+                  style={{ color: glow }}
+                >
+                  {icon}
+                </span>
+              )}
+              <span className="min-w-0">{kicker}</span>
+            </span>
+            {figure}
+          </div>
+          <div className="relative w-full max-w-[190px] @[13rem]:w-[44%] @[13rem]:max-w-[168px] @[13rem]:min-w-[104px] @[13rem]:shrink-0 @[13rem]:self-center">
+            {visual}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="relative flex items-start justify-between gap-3">
+            <span className="min-w-0 text-[11px] leading-5 [overflow-wrap:anywhere] text-muted-foreground">
+              {breakable(kicker)}
+            </span>
+            <span
+              className={cn(
+                "grid size-8 shrink-0 place-items-center rounded-[11px] border transition-colors",
+                tint
+                  ? cn(
+                      TONE[tone as StatusTone].soft,
+                      TONE[tone as StatusTone].text,
+                      "border-border/40",
+                    )
+                  : "border-border/70 bg-chip text-muted-foreground",
+              )}
+              aria-hidden="true"
+            >
+              {icon}
+            </span>
+          </div>
+          {figure}
+        </>
+      )}
     </motion.div>
   );
   if (!href) return body;
@@ -808,19 +890,19 @@ export function ConfirmAction({
     >
       <div className="flex flex-col gap-4">
         <p className="flex gap-3 text-sm">
-          <span className="w-24 shrink-0 text-[10px] font-semibold uppercase tracking-[0.16em] leading-5 text-muted-foreground">
+          <span className="w-24 shrink-0 text-[11px] leading-5 text-muted-foreground">
             Target
           </span>
           <span className="min-w-0">{target}</span>
         </p>
         <p className="flex gap-3 text-sm">
-          <span className="w-24 shrink-0 text-[10px] font-semibold uppercase tracking-[0.16em] leading-5 text-muted-foreground">
+          <span className="w-24 shrink-0 text-[11px] leading-5 text-muted-foreground">
             Consequence
           </span>
           <span className="min-w-0">{consequence}</span>
         </p>
         <p className="flex gap-3 text-sm">
-          <span className="w-24 shrink-0 text-[10px] font-semibold uppercase tracking-[0.16em] leading-5 text-muted-foreground">
+          <span className="w-24 shrink-0 text-[11px] leading-5 text-muted-foreground">
             Endpoint
           </span>
           <code className="min-w-0 rounded-lg bg-chip px-1.5 py-0.5 font-mono text-xs break-all">
@@ -1000,9 +1082,7 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {kicker}
-        </span>
+        <span className="text-xs text-muted-foreground">{kicker}</span>
         <h1 className="mt-1.5 text-[30px] leading-none font-bold tracking-[-0.03em] text-foreground">
           {title}
         </h1>
