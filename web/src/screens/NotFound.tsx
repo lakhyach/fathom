@@ -26,7 +26,7 @@ export function NotFound() {
         <span className="mt-3 block font-mono text-4xl leading-none font-semibold tracking-tight text-muted-foreground/70">
           404
         </span>
-        <span className="mt-3 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        <span className="mt-3 block text-xs text-muted-foreground">
           Off the ridge line
         </span>
         <h1 className="mt-1.5 text-xl font-semibold tracking-tight text-foreground">

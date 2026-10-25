@@ -21,6 +21,14 @@ import {
 import { useHealthz, useMetrics, useReadyz } from "../api/hooks";
 import { byLabel, gaugeValue, workflowCensus } from "../api/prom";
 import {
+  MiniSplit,
+  NodeMotif,
+  ProgressRing,
+  QueueBars,
+  SpectrumBar,
+} from "../components/flow";
+import { toneVar, workflowStatus } from "../theme/status";
+import {
   EmptyState,
   ErrorState,
   KpiCard,
@@ -129,6 +137,8 @@ export function Metrics() {
   const active = ACTIVE.reduce((a, s) => a + (byState.get(s) ?? 0), 0);
   const failed = NEGATIVE.reduce((a, s) => a + (byState.get(s) ?? 0), 0);
   const completed = byState.get("COMPLETED") ?? 0;
+  const manual = byState.get("FAILED_MANUAL") ?? 0;
+  const terminal = completed + failed + manual;
   const openDlq = dlqDepth.reduce((a, r) => a + r.value, 0);
 
   const rawRows = map
@@ -180,38 +190,83 @@ export function Metrics() {
 
       {map && (
         <>
-          <div className="mb-5 grid gap-3 sm:grid-cols-2 max-xl:[&>*:last-child:nth-child(odd)]:col-span-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="mb-5 grid gap-3 sm:grid-cols-2 max-xl:[&>*:last-child:nth-child(odd)]:col-span-2 lg:grid-cols-3 lg:[&>*:nth-child(5)]:col-span-2 xl:grid-cols-5 xl:[&>*:nth-child(5)]:col-span-1">
             <KpiCard
               index={0}
               kicker="Total workflows"
               value={total}
               sub={total > 0 ? "durable census" : "no data yet"}
-              icon={<ListChecks className="size-4" />}
+              icon={<ListChecks className="size-3.5" />}
               tone="neutral"
+              visual={
+                <SpectrumBar
+                  segments={slices.map((s) => ({
+                    label: workflowStatus(s.state).label,
+                    value: s.count,
+                    tone: toneVar(workflowStatus(s.state).tone),
+                  }))}
+                />
+              }
             />
             <KpiCard
               index={1}
               kicker="Completed"
               value={completed}
               sub="terminal · immutable"
-              icon={<Check className="size-4" />}
+              icon={<Check className="size-3.5" />}
               tone="completed"
+              visual={
+                <ProgressRing
+                  value={terminal > 0 ? completed / terminal : null}
+                  caption="of terminal"
+                />
+              }
             />
             <KpiCard
               index={2}
               kicker="Active"
               value={active}
               sub="queued · running · compensating"
-              icon={<Play className="size-4" />}
+              icon={<Play className="size-3.5" />}
               tone="running"
+              visual={
+                <NodeMotif
+                  nodes={ACTIVE.map((s) => ({
+                    label: workflowStatus(s).label,
+                    value: byState.get(s) ?? 0,
+                    tone: toneVar(workflowStatus(s).tone),
+                  }))}
+                />
+              }
             />
             <KpiCard
               index={3}
               kicker="Failed / aborted"
               value={failed}
               sub="terminal · negative"
-              icon={<AlertOctagon className="size-4" />}
+              icon={<AlertOctagon className="size-3.5" />}
               tone="negative"
+              visual={
+                <MiniSplit
+                  rows={[
+                    {
+                      label: "Failed",
+                      value: byState.get("FAILED") ?? 0,
+                      tone: toneVar("negative"),
+                    },
+                    {
+                      label: "Aborted",
+                      value: byState.get("ABORTED") ?? 0,
+                      tone: toneVar("negative"),
+                    },
+                    {
+                      label: "Manual",
+                      value: manual,
+                      tone: toneVar("manual"),
+                    },
+                  ]}
+                />
+              }
             />
             <KpiCard
               index={4}
@@ -225,21 +280,36 @@ export function Metrics() {
                   investigate →
                 </Link>
               }
-              icon={<MailWarning className="size-4" />}
+              icon={<MailWarning className="size-3.5" />}
               tone="manual"
+              visual={
+                <QueueBars
+                  columns={
+                    dlqDepth.length === 0
+                      ? [{ label: "open", value: 0, tone: toneVar("manual") }]
+                      : dlqDepth.slice(0, 4).map((r) => ({
+                          label: r.key,
+                          value: r.value,
+                          tone: toneVar("manual"),
+                        }))
+                  }
+                />
+              }
             />
           </div>
 
           <div className="mb-5 grid gap-4 lg:grid-cols-2">
             <Panel
               title={<h2>Workflow census</h2>}
-              kicker="fathom_workflows_total"
+              kicker="Every workflow this store created"
+              source="fathom_workflows_total — cumulative counter, never decays"
             >
               <Donut slices={slices} total={total} />
             </Panel>
             <Panel
               title={<h2>Transitions</h2>}
-              kicker="fathom_workflow_transitions_total · by edge"
+              kicker="Counted per state change, newest edge last"
+              source="fathom_workflow_transitions_total · by edge"
             >
               <TransitionBars rows={transitions} />
             </Panel>
@@ -248,14 +318,19 @@ export function Metrics() {
           <div className="mb-5 grid gap-4 lg:grid-cols-3">
             <Panel
               title={<h2>Ingress</h2>}
-              kicker="fathom_events_classified_total"
+              kicker="How each inbound event was judged"
+              source="fathom_events_classified_total"
             >
               <BarList
                 rows={classified}
                 emptyText="No events classified yet."
               />
             </Panel>
-            <Panel title={<h2>Dead-letter depth</h2>} kicker="fathom_dlq_depth">
+            <Panel
+              title={<h2>Dead-letter depth</h2>}
+              kicker="Open interventions, per class"
+              source="fathom_dlq_depth"
+            >
               {dlqDepth.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
                   Dead-letter queue is empty.
@@ -266,7 +341,8 @@ export function Metrics() {
             </Panel>
             <Panel
               title={<h2>Relay publish lag</h2>}
-              kicker="fathom_relay_publish_lag_seconds"
+              kicker="Seconds from queue to publish, per relay"
+              source="fathom_relay_publish_lag_seconds"
             >
               {relayLag.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
@@ -299,9 +375,9 @@ export function Metrics() {
                 max={300}
                 label="Oldest unpublished outbox (5 m)"
               />
-              <div className="flex min-w-48 flex-1 flex-col gap-3">
+              <div className="grid min-w-48 flex-1 grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     Outbox backlog
                   </span>
                   <span className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">
@@ -312,7 +388,7 @@ export function Metrics() {
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     Live step leases
                   </span>
                   <span className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">
@@ -323,7 +399,7 @@ export function Metrics() {
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     Relay un-acked rows
                   </span>
                   <span className="font-mono text-lg leading-none font-semibold text-foreground tabular-nums">
@@ -334,7 +410,7 @@ export function Metrics() {
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     Last metrics scrape
                   </span>
                   {metrics.dataUpdatedAt > 0 ? (
@@ -352,7 +428,8 @@ export function Metrics() {
 
           <Panel
             title={<h2>Raw series</h2>}
-            kicker="every fathom_* sample served"
+            kicker="Every sample in this scrape"
+            source="fathom_* series, scraped verbatim"
             bodyClass="p-0"
           >
             {rawRows.length === 0 ? (
@@ -370,13 +447,13 @@ export function Metrics() {
                 </caption>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">
+                    <TableHead className="text-xs text-muted-foreground">
                       Series
                     </TableHead>
-                    <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">
+                    <TableHead className="text-xs text-muted-foreground">
                       Labels
                     </TableHead>
-                    <TableHead className="text-right text-xs text-muted-foreground uppercase tracking-wide">
+                    <TableHead className="text-right text-xs text-muted-foreground">
                       Value
                     </TableHead>
                   </TableRow>

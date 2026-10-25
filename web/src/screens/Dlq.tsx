@@ -379,9 +379,7 @@ function Stat({
         : "text-foreground";
   return (
     <div className="surface-card rounded-xl px-4 py-3">
-      <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        {k}
-      </span>
+      <span className="text-[11px] text-muted-foreground">{k}</span>
       <div
         className={`mt-1 font-mono text-2xl leading-none font-semibold tabular-nums ${tint}`}
       >

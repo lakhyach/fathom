@@ -51,6 +51,12 @@ import {
   useWorkflowAction,
 } from "../api/hooks";
 import { workflowCensus } from "../api/prom";
+import {
+  MiniSplit,
+  NodeMotif,
+  ProgressRing,
+  SpectrumBar,
+} from "../components/flow";
 import { StepNode } from "../graph/StepNode";
 import {
   columnsFor,
@@ -315,6 +321,14 @@ export function WorkflowDetail() {
 
 /* ------------------------------- KPI strip ------------------------------- */
 
+const ACTIVE_STATES = [
+  "QUEUED",
+  "RUNNING",
+  "RETRY_WAITING",
+  "COMPENSATING",
+  "CANCELLING",
+];
+
 function KpiStrip() {
   const metrics = useMetrics();
   const census = metrics.data ? workflowCensus(metrics.data) : [];
@@ -324,67 +338,121 @@ function KpiStrip() {
   const sum = (...keys: string[]) =>
     keys.reduce((a, s) => a + (byState.get(s) ?? 0), 0);
   const total = [...byState.values()].reduce((a, b) => a + b, 0);
+  const completed = sum("COMPLETED");
+  const failed = sum("FAILED");
+  const aborted = sum("ABORTED");
+  const manual = sum("FAILED_MANUAL");
+  const terminal = completed + failed + aborted + manual;
+  const active = sum(...ACTIVE_STATES);
+  const slices = [...byState.entries()]
+    .map(([state, count]) => ({ state, count }))
+    .sort((a, b) => b.count - a.count);
 
-  const cards = [
-    {
-      k: "Total",
-      v: total,
-      tone: "neutral" as const,
-      icon: <Layers className="size-4" />,
-    },
-    {
-      k: "Completed",
-      v: sum("COMPLETED"),
-      tone: "completed" as const,
-      icon: <Check className="size-4" />,
-    },
-    {
-      k: "Active",
-      v: sum(
-        "QUEUED",
-        "RUNNING",
-        "RETRY_WAITING",
-        "COMPENSATING",
-        "CANCELLING",
-      ),
-      tone: "running" as const,
-      icon: <Play className="size-4" />,
-    },
-    {
-      k: "Failed / aborted",
-      v: sum("FAILED", "ABORTED"),
-      tone: "negative" as const,
-      icon: <TriangleAlert className="size-4" />,
-    },
-    {
-      k: "Manual",
-      v: sum("FAILED_MANUAL"),
-      tone: "manual" as const,
-      icon: <Info className="size-4" />,
-    },
-  ];
   return (
     <div
       aria-label="Fleet census"
-      className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 max-xl:[&>*:last-child:nth-child(odd)]:col-span-2 lg:grid-cols-3 xl:grid-cols-5"
+      className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4"
     >
       {metrics.isError ? (
-        <div className="col-span-2 lg:col-span-3 xl:col-span-5">
+        <div className="col-span-2 lg:col-span-4">
           <ErrorState error={metrics.error} onRetry={() => metrics.refetch()} />
         </div>
       ) : metrics.isLoading ? (
-        <LoadingRows rows={1} />
+        <div className="col-span-2 lg:col-span-4">
+          <LoadingRows rows={1} />
+        </div>
       ) : (
-        cards.map((c, i) => (
+        <>
           <KpiCard
-            key={c.k}
-            index={i}
-            kicker={c.k}
-            value={c.v}
-            tone={c.tone}
-            icon={c.icon}
+            index={0}
+            kicker="Total"
+            value={total}
+            sub="every workflow in this store"
+            icon={<Layers className="size-3.5" />}
+            visual={
+              <SpectrumBar
+                segments={slices.map((s) => ({
+                  label: workflowStatus(s.state).label,
+                  value: s.count,
+                  tone: toneVar(workflowStatus(s.state).tone),
+                }))}
+              />
+            }
           />
-        ))
+          <KpiCard
+            index={1}
+            kicker="Completed"
+            value={completed}
+            tone="completed"
+            sub={
+              terminal > 0
+                ? `${completed} of ${terminal} terminal`
+                : "nothing has reached a terminal state yet"
+            }
+            icon={<Check className="size-3.5" />}
+            visual={
+              <ProgressRing
+                value={terminal > 0 ? completed / terminal : null}
+                caption="of terminal"
+              />
+            }
+          />
+          <KpiCard
+            index={2}
+            kicker="Active"
+            value={active}
+            tone="running"
+            sub={
+              active > 0
+                ? ACTIVE_STATES.filter((s) => (byState.get(s) ?? 0) > 0)
+                    .map((s) => workflowStatus(s).label.toLowerCase())
+                    .join(" · ")
+                : "nothing is in flight"
+            }
+            icon={<Play className="size-3.5" />}
+            visual={
+              <NodeMotif
+                nodes={ACTIVE_STATES.map((s) => ({
+                  label: workflowStatus(s).label,
+                  value: byState.get(s) ?? 0,
+                  tone: toneVar(workflowStatus(s).tone),
+                }))}
+              />
+            }
+          />
+          <KpiCard
+            index={3}
+            kicker="Failed / aborted"
+            value={failed + aborted}
+            tone="negative"
+            sub={
+              manual > 0 ? (
+                <Link
+                  to="/dlq"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  {manual} awaiting manual →
+                </Link>
+              ) : (
+                "no workflow is stuck for a human"
+              )
+            }
+            icon={<TriangleAlert className="size-3.5" />}
+            visual={
+              <MiniSplit
+                rows={[
+                  { label: "Failed", value: failed, tone: toneVar("negative") },
+                  {
+                    label: "Aborted",
+                    value: aborted,
+                    tone: toneVar("negative"),
+                  },
+                  { label: "Manual", value: manual, tone: toneVar("manual") },
+                ]}
+              />
+            }
+          />
+        </>
       )}
     </div>
   );
@@ -630,7 +698,7 @@ function GraphPanel({
       </div>
 
       <div className="border-t border-border/60 px-5 py-3">
-        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="text-[11px] text-muted-foreground">
           Steps · arrow keys to move, Enter to inspect
         </p>
         <ul
@@ -966,22 +1034,20 @@ function StepsTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">
-              #
-            </TableHead>
-            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">
+            <TableHead className="text-xs text-muted-foreground">#</TableHead>
+            <TableHead className="text-xs text-muted-foreground">
               Step
             </TableHead>
-            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">
+            <TableHead className="text-xs text-muted-foreground">
               State
             </TableHead>
-            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">
+            <TableHead className="text-xs text-muted-foreground">
               Attempts
             </TableHead>
-            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">
+            <TableHead className="text-xs text-muted-foreground">
               Lease
             </TableHead>
-            <TableHead className="text-xs text-muted-foreground uppercase tracking-wide">
+            <TableHead className="text-xs text-muted-foreground">
               Compensator
             </TableHead>
           </TableRow>

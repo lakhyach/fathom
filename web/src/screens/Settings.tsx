@@ -219,7 +219,7 @@ export function Settings() {
         >
           <ConnectionDiagnostics />
           <div className="mt-4 space-y-2 border-t border-border/60 pt-4">
-            <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               Time format
             </span>
             <ToggleGroup
@@ -402,7 +402,8 @@ function DefinitionsPanel({
   return (
     <Panel
       title={<h2 className="text-sm font-semibold">Workflow definitions</h2>}
-      kicker="GET/POST /v1/definitions"
+      kicker="Definitions this engine accepts"
+      source="GET /v1/definitions · POST /v1/definitions"
       bodyClass="px-0 py-0"
     >
       <Tabs defaultValue="registry" className="gap-0">

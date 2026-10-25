@@ -329,7 +329,7 @@ export function Workflows() {
                     return (
                       <TableHead
                         key={header.id}
-                        className="text-xs text-muted-foreground uppercase tracking-wide"
+                        className="text-xs text-muted-foreground"
                       >
                         {header.isPlaceholder ? null : canSort ? (
                           <button
@@ -402,9 +402,7 @@ export function Workflows() {
               }
             />
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-medium uppercase tracking-[0.14em]">
-                Definition mix on this page
-              </span>
+              <span className="font-medium">Definition mix on this page</span>
               {defMix.map(([d, n]) => (
                 <span
                   key={d}

@@ -124,9 +124,7 @@ export function Events() {
         </form>
 
         <div className="mt-4">
-          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Recent
-          </span>
+          <span className="text-[11px] text-muted-foreground">Recent</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {(recent.data?.items ?? []).map((w) => (
               <button

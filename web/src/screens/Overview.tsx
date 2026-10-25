@@ -1,11 +1,15 @@
-/* Overview — the Phase 8 command centre.
+/* Overview — the Phase 8.1 command centre, recomposed to the reference.
    Two data planes, kept visibly apart:
    • the durable census (fathom_workflows_total) answers "what exists now";
    • the placement walk (GET /v1/workflows, cursor-paged client-side) is the
      only thing that carries time, so every trend, percentile and age on this
      screen is computed from those real rows.
-   Where a window is only partially covered, or a metric has no sample, the
-   panel says so. Nothing here is extrapolated, smoothed or defaulted to zero. */
+   The time plane is drawn as ONE TRACK PER PLACEMENT on an axis fitted to the
+   timestamps that really exist, not as counts in fixed buckets: a fleet that
+   placed seven workflows across two days shows as seven spans across two days,
+   and the panel says the axis was fitted. Where a window is only partially
+   covered, or a metric has no sample, the panel says so. Nothing here is
+   extrapolated, smoothed or defaulted to zero. */
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
@@ -13,6 +17,7 @@ import {
   AlertOctagon,
   ArrowRight,
   Check,
+  Gauge,
   Inbox,
   Info,
   Layers,
@@ -31,23 +36,26 @@ import {
 } from "../api/hooks";
 import { byLabel, gaugeValue, workflowCensus } from "../api/prom";
 import { useSettings } from "../state/settings";
-import { workflowStatus } from "../theme/status";
+import { toneVar, workflowStatus } from "../theme/status";
 import {
-  bucketLabel,
-  bucketPlacements,
+  activityMatrix,
   definitionLedger,
   outcomeSplit,
   percentile,
+  timelineTracks,
+  timePlane,
   wallTimes,
 } from "../lib/aggregate";
 import {
-  ChartLegend,
-  Donut,
-  DurationBars,
-  GaugeRing,
-  MixBars,
-  TrendChart,
-} from "../components/charts";
+  ActivityMatrix,
+  ExecutionTimeline,
+  MiniSplit,
+  NodeMotif,
+  ProgressRing,
+  QueueBars,
+  SpectrumBar,
+} from "../components/flow";
+import { Donut, DurationBars, GaugeRing, MixBars } from "../components/charts";
 import {
   ChartEmpty,
   EmptyState,
@@ -86,10 +94,10 @@ const NEGATIVE = ["FAILED", "ABORTED"];
 
 const HOUR = 3600_000;
 const RANGES = [
-  { value: "1h", label: "1 h", ms: HOUR, bucket: 10 * 60_000 },
-  { value: "6h", label: "6 h", ms: 6 * HOUR, bucket: 30 * 60_000 },
-  { value: "24h", label: "24 h", ms: 24 * HOUR, bucket: 2 * HOUR },
-  { value: "7d", label: "7 d", ms: 7 * 24 * HOUR, bucket: 24 * HOUR },
+  { value: "1h", label: "1 h", ms: HOUR },
+  { value: "6h", label: "6 h", ms: 6 * HOUR },
+  { value: "24h", label: "24 h", ms: 24 * HOUR },
+  { value: "7d", label: "7 d", ms: 7 * 24 * HOUR },
 ] as const;
 type RangeKey = (typeof RANGES)[number]["value"];
 
@@ -97,6 +105,9 @@ export function Overview() {
   const [range, setRange] = useState<RangeKey>("7d");
   const { timeFormat } = useSettings();
   const utc = timeFormat === "utc";
+  /* One snapshot instant per mount: the axis and the open-row spans all agree
+     on "now", and render stays free of Date.now(). */
+  const [now] = useState(() => Date.now());
 
   const metrics = useMetrics();
   const readyz = useReadyz();
@@ -142,23 +153,23 @@ export function Overview() {
     .sort((a, b) => b.count - a.count);
   const defs = definitionLedger(census);
 
-  /* ---- the time plane: real placement rows, bucketed ---- */
+  /* ---- the time plane: real placement rows on a fitted axis ---- */
   const rows = useMemo(() => placements.data?.rows ?? [], [placements.data]);
+  const covered = placements.data?.covered ?? false;
   const spec = RANGES.find((r) => r.value === range)!;
-  const points = useMemo(
-    () =>
-      bucketPlacements(rows, {
-        rangeMs: spec.ms,
-        bucketMs: spec.bucket,
-        utc,
-      }).map((b) => ({
-        ...b,
-        t: b.start,
-        label: bucketLabel(b.start, spec.ms, utc),
-      })),
-    [rows, spec.ms, spec.bucket, utc],
+  const plane = useMemo(
+    () => timePlane(rows, { rangeMs: spec.ms, now }),
+    [rows, spec.ms, now],
   );
-  const windowTotal = points.reduce((a, p) => a + p.total, 0);
+  const tracks = useMemo(
+    () => timelineTracks(rows, plane, now),
+    [rows, plane, now],
+  );
+  const inWindow = tracks.filter((t) => t.created >= plane.windowStart);
+  const matrix = useMemo(
+    () => activityMatrix(rows, { plane, columns: 24, covered, now }),
+    [rows, plane, covered, now],
+  );
   const durations = useMemo(() => wallTimes(rows), [rows]);
   const p50 = percentile(
     durations.map((d) => d.ms),
@@ -190,13 +201,15 @@ export function Overview() {
   const leases = metrics.data
     ? gaugeValue(metrics.data, "fathom_worker_leases_held")
     : null;
+  const idleSince =
+    plane.last === null ? null : Math.max(0, now - Math.min(plane.last, now));
 
   return (
     <div className="mx-auto w-full max-w-[1600px]">
       <PageHeader
         kicker="Control plane"
         title="Overview"
-        sub="Durable census from the engine's own series, and a placement timeline built from the workflow ledger itself."
+        sub="What exists now, from the engine's own census — and what happened when, from the workflow ledger itself."
         side={
           <>
             {metrics.dataUpdatedAt > 0 && (
@@ -222,7 +235,7 @@ export function Overview() {
       )}
 
       {/* ------------------------------ KPI strip ------------------------------ */}
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 max-xl:[&>*:last-child:nth-child(odd)]:col-span-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 max-xl:[&>*:last-child:nth-child(odd)]:col-span-2 lg:grid-cols-3 lg:[&>*:nth-child(5)]:col-span-2 xl:grid-cols-5 xl:[&>*:nth-child(5)]:col-span-1">
         {metrics.isError ? (
           <div className="col-span-2 lg:col-span-3 xl:col-span-5">
             <ErrorState
@@ -240,9 +253,18 @@ export function Overview() {
               index={0}
               kicker="Placements"
               value={total}
-              sub="every workflow, live census"
-              icon={<Layers className="size-4" />}
-              tone="neutral"
+              sub={`across ${defs.length} definition${defs.length === 1 ? "" : "s"}`}
+              icon={<Layers className="size-3.5" />}
+              accent="var(--primary)"
+              visual={
+                <SpectrumBar
+                  segments={slices.map((s) => ({
+                    label: workflowStatus(s.state).label,
+                    value: s.count,
+                    tone: toneVar(workflowStatus(s.state).tone),
+                  }))}
+                />
+              }
             />
             <KpiCard
               index={1}
@@ -257,21 +279,45 @@ export function Overview() {
                   ? `${completed} of ${terminal} terminal`
                   : "nothing has reached a terminal state yet"
               }
-              icon={<Check className="size-4" />}
-              tone="completed"
+              icon={<Check className="size-3.5" />}
+              accent="var(--st-completed)"
+              visual={
+                <ProgressRing
+                  value={terminal > 0 ? completed / terminal : null}
+                  caption="of terminal"
+                />
+              }
             />
             <KpiCard
               index={2}
               kicker="Active"
               value={active}
-              sub="queued · running · retry · compensating"
-              icon={<Play className="size-4" />}
-              tone="running"
+              sub={
+                active > 0
+                  ? ACTIVE.filter((s) => (byState.get(s) ?? 0) > 0)
+                      .map((s) => workflowStatus(s).label.toLowerCase())
+                      .join(" · ")
+                  : "nothing is in flight"
+              }
+              icon={<Play className="size-3.5" />}
+              accent="var(--st-running)"
+              visual={
+                <NodeMotif
+                  nodes={ACTIVE.map((s) => ({
+                    label: workflowStatus(s).label,
+                    value: byState.get(s) ?? 0,
+                    tone: toneVar(workflowStatus(s).tone),
+                  }))}
+                />
+              }
             />
             <KpiCard
               index={3}
               kicker="Failed / aborted"
               value={failed}
+              tone="negative"
+              icon={<AlertOctagon className="size-3.5" />}
+              accent="var(--st-negative)"
               sub={
                 manual > 0 ? (
                   <Link
@@ -281,36 +327,73 @@ export function Overview() {
                     {manual} awaiting manual →
                   </Link>
                 ) : (
-                  "terminal · negative"
+                  "no workflow is stuck for a human"
                 )
               }
-              icon={<AlertOctagon className="size-4" />}
-              tone="negative"
+              visual={
+                <MiniSplit
+                  rows={[
+                    {
+                      label: "Failed",
+                      value: byState.get("FAILED") ?? 0,
+                      tone: toneVar("negative"),
+                    },
+                    {
+                      label: "Aborted",
+                      value: byState.get("ABORTED") ?? 0,
+                      tone: toneVar("negative"),
+                    },
+                    {
+                      label: "Manual",
+                      value: manual,
+                      tone: toneVar("manual"),
+                    },
+                  ]}
+                />
+              }
             />
             <KpiCard
               index={4}
               kicker="Queue depth"
               value={metrics.data ? dlqTotal : "—"}
+              tone={dlqTotal > 0 ? "manual" : "neutral"}
+              icon={<Inbox className="size-3.5" />}
+              accent="var(--st-warn)"
               sub={
                 outboxDepth === null
                   ? "dead letters · outbox unknown"
-                  : `dead letters · ${outboxDepth} outbox rows`
+                  : `open · ${outboxDepth} outbox waiting`
               }
-              icon={<Inbox className="size-4" />}
-              tone={dlqTotal > 0 ? "manual" : "neutral"}
               href="/dlq"
+              visual={
+                <QueueBars
+                  columns={[
+                    ...dlqDepth.slice(0, 3).map((r) => ({
+                      label: r.key,
+                      value: r.value,
+                      tone: toneVar("manual"),
+                    })),
+                    {
+                      label: "outbox",
+                      value: outboxDepth ?? 0,
+                      tone: toneVar("warn"),
+                    },
+                  ]}
+                />
+              }
             />
           </>
         )}
       </div>
 
-      {/* ------------------- the signature trend + control plane ------------------- */}
+      {/* ------------------- the signature timeline + control plane ------------------- */}
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
         <Panel
           className="lg:col-span-2"
           bodyClass="flex min-h-0 flex-1 flex-col"
           title={<h2>Placement flow</h2>}
-          kicker="GET /v1/workflows · outcome per bucket"
+          kicker="One track per workflow, from placement to terminal"
+          source="GET /v1/workflows · created_at → finished_at"
           actions={
             <Segmented
               ariaLabel="Trend time range"
@@ -321,53 +404,76 @@ export function Overview() {
           }
         >
           {placements.isLoading && !placements.data ? (
-            <LoadingRows rows={4} />
+            <LoadingRows rows={5} />
           ) : placements.isError ? (
             <ErrorState
               error={placements.error}
               onRetry={() => placements.refetch()}
             />
-          ) : windowTotal === 0 ? (
+          ) : inWindow.length === 0 ? (
             <ChartEmpty
-              height={268}
-              message={`No workflow was placed in the last ${spec.label.toLowerCase()}. The walk found ${rows.length} placement${rows.length === 1 ? "" : "s"} in total — widen the range if you expected traffic here.`}
+              height={252}
+              message={`No workflow was placed in the last ${spec.label.toLowerCase()}${
+                rows.length
+                  ? ` — the walk found ${rows.length} placement${
+                      rows.length === 1 ? "" : "s"
+                    } further back, so widen the range to see them.`
+                  : " — the ledger is empty."
+              }`}
             />
           ) : (
             <>
-              <TrendChart points={points} fill />
+              <ExecutionTimeline
+                tracks={inWindow}
+                plane={plane}
+                now={now}
+                limit={7}
+              />
               <div className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hairline pt-4">
-                <ChartLegend
-                  items={[
+                <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  {[
                     {
-                      label: "Completed",
-                      tone: "var(--st-completed)",
-                      value: points.reduce((a, p) => a + p.completed, 0),
-                    },
-                    {
-                      label: "Failed / aborted",
-                      tone: "var(--st-negative)",
-                      value: points.reduce((a, p) => a + p.negative, 0),
+                      label: "Reached terminal",
+                      tone: toneVar("completed"),
+                      n: inWindow.filter((t) => !t.open).length,
                     },
                     {
                       label: "Still open",
-                      tone: "var(--st-running)",
-                      value: points.reduce((a, p) => a + p.open, 0),
+                      tone: toneVar("running"),
+                      n: inWindow.filter((t) => t.open).length,
                     },
-                  ]}
-                />
+                    {
+                      label: "Negative",
+                      tone: toneVar("negative"),
+                      n: inWindow.filter((t) => t.outcome === "negative")
+                        .length,
+                    },
+                  ].map((i) => (
+                    <li
+                      key={i.label}
+                      className="flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                      <span
+                        className="h-2 w-4 rounded-full"
+                        style={{ background: i.tone }}
+                        aria-hidden="true"
+                      />
+                      <span className="text-foreground">{i.label}</span>
+                      <span className="font-mono tabular-nums">{i.n}</span>
+                    </li>
+                  ))}
+                </ul>
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
                       className="group inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-chip hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
                     >
-                      {windowTotal} placement{windowTotal === 1 ? "" : "s"} ·{" "}
-                      {spec.bucket >= 24 * HOUR
-                        ? "daily"
-                        : `${Math.round(spec.bucket / 60_000)} min`}{" "}
-                      buckets
-                      {!placements.data?.covered && (
-                        <span className="text-st-warn">· window partial</span>
+                      Axis spans {humanDuration(plane.spanMs)} ·{" "}
+                      {inWindow.length} placement
+                      {inWindow.length === 1 ? "" : "s"}
+                      {plane.fitted && (
+                        <span className="text-st-warn">· fitted</span>
                       )}
                       <Info className="size-3.5 opacity-60 transition-opacity group-hover:opacity-100" />
                     </button>
@@ -385,48 +491,52 @@ export function Overview() {
                         <code className="font-mono text-foreground">
                           GET /v1/workflows
                         </code>{" "}
-                        has no server-side date filter, so the trend is
-                        assembled by walking cursors backwards on the client.
+                        has no server-side date filter, so the window is
+                        assembled by walking cursors backwards on the client and
+                        the axis is then fitted to the timestamps that walk
+                        really returned.
                       </PopoverDescription>
                     </PopoverHeader>
                     <div className="mt-3 space-y-2 text-muted-foreground">
                       <ul className="space-y-1">
-                        <li className="flex justify-between gap-3">
-                          <span>Page size</span>
-                          <span className="font-mono text-foreground tabular-nums">
-                            {PLACEMENT_PAGE_SIZE}
-                          </span>
-                        </li>
-                        <li className="flex justify-between gap-3">
-                          <span>Page cap</span>
-                          <span className="font-mono text-foreground tabular-nums">
-                            {PLACEMENT_MAX_PAGES}
-                          </span>
-                        </li>
-                        <li className="flex justify-between gap-3">
-                          <span>Rows walked</span>
-                          <span className="font-mono text-foreground tabular-nums">
-                            {rows.length}
-                          </span>
-                        </li>
+                        {[
+                          ["Page size", PLACEMENT_PAGE_SIZE],
+                          ["Page cap", PLACEMENT_MAX_PAGES],
+                          ["Rows walked", rows.length],
+                          ["Placed in range", inWindow.length],
+                        ].map(([k, v]) => (
+                          <li key={k} className="flex justify-between gap-3">
+                            <span>{k}</span>
+                            <span className="font-mono text-foreground tabular-nums">
+                              {v}
+                            </span>
+                          </li>
+                        ))}
                       </ul>
                       <p>
-                        {placements.data?.covered ? (
-                          <>
-                            The walk reached the start of this{" "}
-                            <span className="text-foreground">
-                              {spec.label}
-                            </span>{" "}
-                            window, so the buckets are complete.
-                          </>
-                        ) : (
+                        {plane.fitted ? (
                           <span className="text-st-warn">
-                            The page cap stopped the walk above the start of
-                            this window. The oldest buckets are partial — they
-                            are labelled as such, never drawn as zero.
+                            The selected {spec.label} window is wider than the
+                            activity inside it, so the axis is fitted to the
+                            first and last real timestamp rather than showing
+                            empty time. Nothing outside the axis is hidden — the
+                            walk found {rows.length} row
+                            {rows.length === 1 ? "" : "s"} in total.
                           </span>
+                        ) : (
+                          <>
+                            The marks fill the selected {spec.label} window, so
+                            the axis is the whole window.
+                          </>
                         )}
                       </p>
+                      {!covered && (
+                        <p className="text-st-warn">
+                          The page cap stopped the walk before it reached the
+                          start of this window — older placements exist that are
+                          not drawn.
+                        </p>
+                      )}
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -435,7 +545,11 @@ export function Overview() {
           )}
         </Panel>
 
-        <Panel title={<h2>Control plane</h2>} kicker="readyz · /metrics gauges">
+        <Panel
+          title={<h2>Control plane</h2>}
+          kicker="Readiness, leases and relay backlog"
+          source="GET /readyz · GET /metrics"
+        >
           <div className="mb-3 flex items-start justify-around gap-4">
             <GaugeRing
               value={oldestOpen}
@@ -488,9 +602,69 @@ export function Overview() {
         </Panel>
       </div>
 
-      {/* ------------------------ census · volume · latency ------------------------ */}
-      <div className="mb-4 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <Panel title={<h2>State census</h2>} kicker="fathom_workflows_total">
+      {/* ------------------------ activity matrix · census ------------------------ */}
+      <div className="mb-4 grid gap-4 lg:grid-cols-3">
+        <Panel
+          className="lg:col-span-2"
+          title={<h2>Execution ledger</h2>}
+          kicker="What the ledger recorded for each placement, slot by slot"
+          source="GET /v1/workflows · created_at, updated_at, finished_at"
+        >
+          {placements.isLoading && !placements.data ? (
+            <LoadingRows rows={5} />
+          ) : matrix.length === 0 ? (
+            <ChartEmpty
+              height={168}
+              message="No placement rows in this window, so there is no ledger activity to place on the grid."
+            />
+          ) : (
+            <>
+              <ActivityMatrix rows={matrix} plane={plane} covered={covered} />
+              <ul className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-hairline pt-4">
+                {[
+                  { dot: "bg-primary", label: "placed in slot" },
+                  { dot: "bg-st-running/70", label: "in flight" },
+                  { dot: "bg-st-compensating", label: "ledger row moved" },
+                  { dot: "bg-st-completed", label: "terminal success" },
+                  { dot: "bg-st-negative", label: "failed or aborted" },
+                  { dot: "bg-st-manual", label: "needs a human" },
+                  {
+                    dot: "bg-transparent ring-1 ring-inset ring-border/80",
+                    label: "settled",
+                  },
+                  {
+                    dot: "bg-foreground/8",
+                    label: "did not exist yet",
+                  },
+                ].map((l) => (
+                  <li
+                    key={l.label}
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                  >
+                    <span
+                      className={`size-2.5 rounded-full ${l.dot}`}
+                      aria-hidden="true"
+                    />
+                    {l.label}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                {matrix.length} placement{matrix.length === 1 ? "" : "s"} ×{" "}
+                {matrix[0].cells.length} slots of{" "}
+                {humanDuration(plane.spanMs / matrix[0].cells.length)} each. A
+                slot proves the ledger row changed in it, never a step boundary
+                — the API exposes step timing on the workflow detail, not here.
+              </p>
+            </>
+          )}
+        </Panel>
+
+        <Panel
+          title={<h2>State census</h2>}
+          kicker="Durable count of every workflow"
+          source="fathom_workflows_total"
+        >
           {metrics.isLoading ? (
             <LoadingRows rows={4} />
           ) : (
@@ -502,60 +676,16 @@ export function Overview() {
             decay — they cover every workflow this store has created.
           </p>
         </Panel>
-
-        <Panel
-          title={<h2>Volume by definition</h2>}
-          kicker="fathom_workflows_total · def_name"
-        >
-          {defs.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              No workflow definitions have produced a placement yet.
-            </p>
-          ) : (
-            <>
-              <MixBars rows={defs} />
-              <p className="mt-5 border-t border-hairline pt-4 text-[11px] leading-relaxed text-muted-foreground">
-                {defs.length} definition{defs.length === 1 ? "" : "s"} appear in
-                the census. Bar length ranks by total placements; the split
-                shows how each one ended.
-              </p>
-            </>
-          )}
-        </Panel>
-
-        <Panel
-          className="lg:col-span-2 xl:col-span-1"
-          title={<h2>Wall time to terminal</h2>}
-          kicker="created_at → finished_at"
-          actions={
-            <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-              p50 {p50 === null ? "—" : `${Math.round(p50 / 1000)}s`} · p95{" "}
-              {p95 === null ? "—" : `${Math.round(p95 / 1000)}s`}
-            </span>
-          }
-        >
-          {placements.isLoading && !placements.data ? (
-            <LoadingRows rows={4} />
-          ) : (
-            <>
-              <DurationBars items={durations} />
-              <p className="mt-5 border-t border-hairline pt-4 text-[11px] leading-relaxed text-muted-foreground">
-                {durations.length} of {rows.length} walked placements are
-                finished; percentiles are nearest-rank over exactly those
-                samples.
-              </p>
-            </>
-          )}
-        </Panel>
       </div>
 
       {/* ------------------------ recent executions · dead letters ------------------------ */}
-      <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+      <div className="mb-4 grid gap-4 lg:grid-cols-3 lg:items-start">
         <Panel
           className="lg:col-span-2"
           bodyClass="p-0"
           title={<h2>Recent executions</h2>}
-          kicker="newest placements first"
+          kicker="Newest placements first"
+          source="GET /v1/workflows?limit=8"
           actions={
             <Button asChild variant="outline" size="sm">
               <Link to="/workflows">View all</Link>
@@ -593,7 +723,7 @@ export function Overview() {
                       <span
                         className="size-2 shrink-0 rounded-full"
                         style={{
-                          background: `var(--st-${workflowStatus(w.state).tone})`,
+                          background: toneVar(workflowStatus(w.state).tone),
                         }}
                         aria-hidden="true"
                       />
@@ -609,7 +739,7 @@ export function Overview() {
                         </span>
                       </span>
                       <StatusBadge state={w.state} size="sm" />
-                      <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">
+                      <span className="w-[70px] shrink-0 text-right text-xs whitespace-nowrap text-muted-foreground">
                         <RelTime iso={w.created_at} />
                       </span>
                       <ArrowRight
@@ -634,7 +764,8 @@ export function Overview() {
 
         <Panel
           title={<h2>Dead letters</h2>}
-          kicker="fathom_dlq_depth · GET /v1/dlq"
+          kicker="Steps the engine stopped retrying"
+          source="fathom_dlq_depth · GET /v1/dlq"
         >
           <div className="mb-1 flex items-baseline gap-2">
             <span className="text-[30px] leading-none font-bold tracking-[-0.03em] text-foreground tabular-nums">
@@ -695,8 +826,8 @@ export function Overview() {
               <p className="mt-3 border-t border-hairline pt-3 text-[11px] leading-relaxed text-muted-foreground">
                 {dlqPage.data!.items.filter((d) => !d.resolved_at).length} open,{" "}
                 {dlqPage.data!.items.filter((d) => d.resolved_at).length}{" "}
-                resolved on this page. A dead letter is a step the engine
-                stopped retrying — it needs an operator action on the workflow.
+                resolved on this page. A dead letter needs an operator action on
+                the workflow.
               </p>
             </>
           )}
@@ -713,6 +844,77 @@ export function Overview() {
           </Button>
         </Panel>
       </div>
+
+      {/* ------------------------ volume · latency ------------------------ */}
+      <div className="mb-4 grid gap-4 lg:grid-cols-2">
+        <Panel
+          title={<h2>Volume by definition</h2>}
+          kicker="Placements per workflow definition"
+          source="fathom_workflows_total · def_name"
+        >
+          {defs.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No workflow definitions have produced a placement yet.
+            </p>
+          ) : (
+            <>
+              <MixBars rows={defs} />
+              <p className="mt-5 border-t border-hairline pt-4 text-[11px] leading-relaxed text-muted-foreground">
+                {defs.length} definition{defs.length === 1 ? "" : "s"} appear in
+                the census. Bar length ranks by total placements; the split
+                shows how each one ended.
+              </p>
+            </>
+          )}
+        </Panel>
+
+        <Panel
+          title={<h2>Wall time to terminal</h2>}
+          kicker="Placement to terminal state, per execution"
+          source="GET /v1/workflows · created_at → finished_at"
+          actions={
+            <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+              p50 {p50 === null ? "—" : `${Math.round(p50 / 1000)}s`} · p95{" "}
+              {p95 === null ? "—" : `${Math.round(p95 / 1000)}s`}
+            </span>
+          }
+        >
+          {placements.isLoading && !placements.data ? (
+            <LoadingRows rows={4} />
+          ) : (
+            <>
+              <DurationBars items={durations} />
+              <p className="mt-5 border-t border-hairline pt-4 text-[11px] leading-relaxed text-muted-foreground">
+                {durations.length} of {rows.length} walked placements are
+                finished; percentiles are nearest-rank over exactly those
+                samples.
+              </p>
+            </>
+          )}
+        </Panel>
+      </div>
+
+      {/* --------------------------- honesty footer --------------------------- */}
+      <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-hairline pt-4 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <Gauge className="size-3.5" aria-hidden="true" />
+          Measured from live engine data
+        </span>
+        <span>
+          Census and gauges are engine series; every time on this screen is a
+          real ledger timestamp.
+        </span>
+        <span className="ml-auto font-mono">
+          {utc ? "times shown in UTC" : "times shown in local timezone"}
+        </span>
+      </footer>
+
+      {idleSince !== null && idleSince > 15 * 60_000 && (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Nothing has been placed or moved for {humanDuration(idleSince)} — the
+          quiet above is the real state of this fleet, not a gap in the data.
+        </p>
+      )}
     </div>
   );
 }
