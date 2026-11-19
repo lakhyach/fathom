@@ -46,7 +46,7 @@ var bannedFileSuffixes = []string{".pem", ".key", ".p12", ".pfx", ".kdbx"}
 // skipDirs are excluded from the content scan (third-party/generated/doc dirs).
 func skipDir(name string) bool {
 	switch name {
-	case ".git", "node_modules", "web", "docs", "tools", "bin", "dist", "vendor":
+	case ".git", ".artifacts", "node_modules", "docs", "tools", "bin", "dist", "vendor":
 		return true
 	}
 	return false
@@ -57,14 +57,16 @@ func skipDir(name string) bool {
 // they legitimately contain fake credential fixtures or generated hashes.
 func isScannable(path string) bool {
 	base := filepath.Base(path)
-	if strings.HasSuffix(base, "_test.go") {
+	if strings.HasSuffix(base, "_test.go") ||
+		strings.HasSuffix(base, ".test.ts") ||
+		strings.HasSuffix(base, ".test.tsx") {
 		return false
 	}
 	if base == ".env.example" || base == "go.sum" {
 		return false
 	}
 	switch filepath.Ext(path) {
-	case ".go", ".yaml", ".yml", ".json", ".toml", ".tf", ".sh", ".ps1":
+	case ".go", ".yaml", ".yml", ".json", ".toml", ".tf", ".sh", ".ps1", ".ts", ".tsx", ".js", ".jsx":
 		return true
 	}
 	return false

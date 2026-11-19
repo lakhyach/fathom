@@ -1,8 +1,6 @@
 # Primary CI — the reproducible foundation gate.
 #
-# NOTE (Phase 3 §5): this repository has NO git remote yet, so these workflows
-# are authored and syntax-validated but have NEVER executed. They become live
-# once a GitHub repo is created and pushed to (a later, user-authorized step).
+# Primary CI for the Go control plane and React cockpit.
 name: CI
 
 on:
@@ -19,6 +17,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  web:
+    name: frontend / typecheck / test / lint / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
+
   go:
     name: format / vet / lint / test / race / build
     runs-on: ubuntu-latest

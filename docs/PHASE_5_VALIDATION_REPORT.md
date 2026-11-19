@@ -96,7 +96,7 @@ rate-limiter map access, scheduler-vs-worker races) executed under the detector
 with **zero data-race reports**. Command (reproducible):
 
 ```
-docker run --rm -v E:\Projects\fathom-workflow:/src -v fathom-gomod:/go/pkg/mod -w /src \
+docker run --rm -v .:/src -v fathom-gomod:/go/pkg/mod -w /src \
   -e CGO_ENABLED=1 \
   -e FATHOM_TEST_DATABASE_URL=postgres://…@172.17.0.1:5434/fathom_test?sslmode=disable \
   golang:1.26.5-bookworm sh -c "go test -race -tags integration -p 1 -count=1 ./..."

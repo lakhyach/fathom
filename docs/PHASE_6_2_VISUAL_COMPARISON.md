@@ -1,6 +1,6 @@
 # Phase 6.2 — Reference-Locked Visual Fidelity Comparison
 
-**Project:** Nunatak (formerly Fathom) · **Repo:** `E:\Projects\fathom-workflow`
+**Project:** Nunatak (formerly Fathom) · **Repo:** this repository
 **Baseline commit:** `1fc3c55` · **Reviewed:** 2026-10-23
 **Design target:** the supplied premium workflow-execution cockpit reference
 ("Fathom · Order Processing", 1536 × 1024).

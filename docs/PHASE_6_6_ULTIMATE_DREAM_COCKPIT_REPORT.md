@@ -1,7 +1,7 @@
 # PHASE 6.6 — Nunatak Ultimate Dream Cockpit
 
 **Mission:** full-application per-route visual rebuild + truthful MCP-toolkit
-integration + real-browser QA, against `E:\Projects\fathom-workflow`.
+integration + real-browser QA, against this repository.
 
 **Baseline:** Phase 6.4 `a011b47`, Phase 6.5 `c474b1c`.
 **Result:** every route redesigned *independently* (not shared-CSS-only), one

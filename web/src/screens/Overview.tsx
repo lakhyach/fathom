@@ -55,6 +55,13 @@ import {
   QueueBars,
   SpectrumBar,
 } from "../components/flow";
+import {
+  ActivePipeline,
+  ExecutionsOrb,
+  FracturedForm,
+  QueueStack,
+  SuccessTorus,
+} from "../components/artwork";
 import { Donut, DurationBars, GaugeRing, MixBars } from "../components/charts";
 import {
   ChartEmpty,
@@ -256,6 +263,9 @@ export function Overview() {
               sub={`across ${defs.length} definition${defs.length === 1 ? "" : "s"}`}
               icon={<Layers className="size-3.5" />}
               accent="var(--primary)"
+              artwork={
+                <ExecutionsOrb className="absolute -right-2 -top-5 size-32 opacity-35" />
+              }
               visual={
                 <SpectrumBar
                   segments={slices.map((s) => ({
@@ -281,6 +291,9 @@ export function Overview() {
               }
               icon={<Check className="size-3.5" />}
               accent="var(--st-completed)"
+              artwork={
+                <SuccessTorus className="absolute -right-2 -top-5 size-32 opacity-35" />
+              }
               visual={
                 <ProgressRing
                   value={terminal > 0 ? completed / terminal : null}
@@ -301,6 +314,9 @@ export function Overview() {
               }
               icon={<Play className="size-3.5" />}
               accent="var(--st-running)"
+              artwork={
+                <ActivePipeline className="absolute -right-2 -top-5 size-32 opacity-35" />
+              }
               visual={
                 <NodeMotif
                   nodes={ACTIVE.map((s) => ({
@@ -318,6 +334,9 @@ export function Overview() {
               tone="negative"
               icon={<AlertOctagon className="size-3.5" />}
               accent="var(--st-negative)"
+              artwork={
+                <FracturedForm className="absolute -right-2 -top-5 size-32 opacity-35" />
+              }
               sub={
                 manual > 0 ? (
                   <Link
@@ -359,6 +378,9 @@ export function Overview() {
               tone={dlqTotal > 0 ? "manual" : "neutral"}
               icon={<Inbox className="size-3.5" />}
               accent="var(--st-warn)"
+              artwork={
+                <QueueStack className="absolute -right-2 -top-5 size-32 opacity-35" />
+              }
               sub={
                 outboxDepth === null
                   ? "dead letters · outbox unknown"

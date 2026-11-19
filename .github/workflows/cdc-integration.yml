@@ -1,9 +1,8 @@
 # CDC integration smoke — proves the pinned Kafka/Debezium image pair works with
 # the franz-go client and the Outbox EventRouter connector on a real broker.
 #
-# NOTE (Phase 3 §5): no git remote exists yet, so this workflow has NEVER run;
-# it is validated for syntax locally. The equivalent steps WERE executed on the
-# Windows dev host during Phase 3 (see docs/PHASE_3_VALIDATION_REPORT.md).
+# The equivalent steps were also executed locally; see
+# docs/PHASE_3_VALIDATION_REPORT.md.
 name: CDC Integration Smoke
 
 on:

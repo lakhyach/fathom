@@ -9,10 +9,10 @@ in this environment, with the reason) / **NOT RUN** (not executed here).
 
 | Item | Value | Verified |
 | --- | --- | --- |
-| Repo | `E:\Projects\fathom-workflow`, branch `main` | ✅ |
+| Repo | repository root, branch `main` | ✅ |
 | HEAD before this phase | `a145d57` "Phase 2: project foundation, locked decisions, and specification" (not amended/rewritten) | ✅ |
 | Git remote | **none** (`git remote -v` empty) — by design, ADR-001 | ✅ |
-| Upstream clone | `E:\Projects\saga-orchestration-go` untouched (its own `docs/` only) | ✅ |
+| Upstream clone | separate upstream repository untouched | ✅ |
 | Go | `go1.26.5 windows/amd64` | ✅ |
 | Docker Engine / Compose | `29.7.2` / `v5.5.0` (daemon live) | ✅ |
 | gcc / C toolchain | **absent** (`where gcc` → not found) — drives the race BLOCKED case | ✅ |

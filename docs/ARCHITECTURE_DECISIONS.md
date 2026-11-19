@@ -6,13 +6,13 @@ Each ADR records the decision, the **evidence actually measured** (marked 🔬),
 ---
 
 ## ADR-001 — Repository boundary and git discipline
-**Decided:** new directory `E:\Projects\fathom-workflow`, fresh `git init` (branch `main`), **no remote configured, ever pointing at upstream**. The clone at `E:\Projects\saga-orchestration-go` remains untouched (verified: `git status` there shows only its own `docs/`).
+**Decided:** a new repository, initialized on branch `main`, independent of the upstream project. It had no remote at initialization; its later authorized publication uses a separate repository and never points at upstream.
 **Why:** upstream `origin` has *push* access to the author's repository (Phase 1 audit §1); a stray push would be an act of vandalism on someone else's project. A history-less repo also makes the "original implementation" claim structurally true, not just rhetorically.
 **Rejected:** fork (keeps upstream history and invites comparison-clone perception); working inside the clone (blurs provenance).
 
 ## ADR-002 — Codename "Fathom"; no public brand yet
 **Decided:** internal codename **Fathom** (a unit of depth — fitting for depth-inspectable workflows). Directory/module naming uses `fathom`. Final branding is deferred to Phase 7 and requires a fresh conflict check.
-**Evidence 🔬:** collision search 2026-10-23: "Cadence" collides twice (Uber's workflow engine; the user's own `E:\Projects\Cadence` health project) → the Phase 1 proposal name is **retired**. "Fathom" collides only with unrelated categories (AI notetaker fathom.ai, accounting BI fathomhq, fisheries software) — acceptable for an internal codename, risky for a public dev-tool name; hence the rebrand gate.
+**Evidence 🔬:** collision search 2026-10-23: "Cadence" collides with Uber's workflow engine and an existing health product → the Phase 1 proposal name is **retired**. "Fathom" collides only with unrelated categories (AI notetaker fathom.ai, accounting BI fathomhq, fisheries software) — acceptable for an internal codename, risky for a public dev-tool name; hence the rebrand gate.
 **Rejected:** Cadence (direct collision with a workflow engine — fatal for a portfolio piece in the same category).
 
 ## ADR-003 — Build the engine; do not adopt Temporal/Cadence
@@ -96,8 +96,8 @@ Each ADR records the decision, the **evidence actually measured** (marked 🔬),
 **Rejected:** verbatim reuse (legal under MIT, but muddies the originality claim for no engineering gain); clean-room-with-no-attribution (paying a self-inflicted cost — the mechanisms were empirically validated).
 
 ## ADR-017 — No remote, no deploy, no billable resources in Phase 2/3
-**Decided:** local git only. GitHub publication and any hosting require explicit user authorization at the end of Phase 6/7 respectively. Nothing here purchases or deploys anything.
-**Phase 3 status:** unchanged — `git remote -v` still returns nothing; no remote created; CI workflows are authored + validated with `actionlint` but have not executed.
+**Decided (2026-10-23):** local git only at that phase. GitHub publication and hosting were gated on explicit user authorization; nothing was purchased or deployed.
+**Current status (2026-11-19):** GitHub publication has since been authorized. Public hosting remains gated on the production API/authentication work in `THREAT_MODEL.md`.
 
 ## ADR-018 — Identifier strategy: UUIDv7 via `google/uuid`
 **Decided:** identifiers for workflows/steps/attempts/events/inbox keys are **UUID version 7**, generated through `github.com/google/uuid v1.6.0` (`NewV7`), rendered as canonical lowercase hyphenated text. A thin `internal/id` package owns the policy (always-v7, canonical form, injectable-entropy seam for tests) so the rest of the code never imports the library directly.

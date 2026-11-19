@@ -1,13 +1,9 @@
 # Fathom — Developer Guide
 
-This is the **reproducible engineering foundation** only (Phase 3). It is not a
-workflow engine, an API, a deployment, or a product — those come in later
-phases. Everything here is chosen so a clean checkout builds, tests, and runs
-on Windows and Linux with **no C toolchain** and **no ambiguity about versions**.
-
-> Scope guard: the only product code is a minimal, compilable entry point plus
-> the foundation packages (config, logging, id, app lifecycle, repo hygiene).
-> No business/workflow behaviour is implemented or faked here.
+This guide covers the current Go workflow control plane and the React operations
+cockpit. The stack builds on Windows and Linux with **no C toolchain**. The
+engine, database-backed API, workers, scheduler, and cockpit are real; the
+`echo` task is an explicitly labelled local wiring sample, not business logic.
 
 ---
 
@@ -68,6 +64,23 @@ go run ./cmd/fathom worker      # participant execution loop only
 go run ./cmd/fathom relay       # outbox→Kafka relay only (needs FATHOM_KAFKA_BROKERS)
 ```
 
+The Go service requires a reachable PostgreSQL 17+ database. For an end-to-end
+local run, set `FATHOM_DATABASE_URL`, `FATHOM_API_KEYS`, and
+`FATHOM_DEV_ECHO=1` in the shell, then start `go run ./cmd/fathom`. The example
+values in `.env.example` are documentation only: the program does not load a
+`.env` file. To open the cockpit in another shell:
+
+```sh
+cd web
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`, then present the matching `label:role:key` from
+`FATHOM_API_KEYS` in **Settings**. The Vite proxy forwards the cockpit's API
+requests to the loopback Go service. `FATHOM_DEV_ECHO=1` enables a deterministic
+sample task so a workflow can execute without an external participant service.
+
 `task` resolves `sh` on Git-for-Windows and on Linux alike, so the same
 Taskfile is the single source of truth on both. Nothing here requires `make`.
 
@@ -93,11 +106,10 @@ There is no config file, and **no secret is ever committed or embedded**.
 | `FATHOM_DEV_ECHO` | yes | `false` | registers the deterministic **echo SAMPLE** participant (dev wiring exercises only — explicitly not a domain participant). |
 | `FATHOM_RELAY`, `FATHOM_OTLP_ENDPOINT` | **reserved** | — | documented in `.env.example`, not read yet (the OTLP exporter is deferred; trace *context* is contract-level — see PHASE_5_SPEC_CHECKLIST gap 8). |
 
-Safe local setup:
-
-```sh
-cp .env.example .env      # .env is git-ignored; every value in the example is fake
-```
+`.env.example` documents fake local values; it is not loaded by the application.
+Set required values in the process environment, and replace every placeholder
+before using credentials outside a disposable local database. Never commit a
+real `.env` file.
 
 Secret-handling guarantees (all covered by tests in `internal/config` and
 `internal/logging`):
@@ -240,17 +252,18 @@ by `cmd/` or `internal/`.
 
 ## 8. CI
 
-Two GitHub Actions workflows are committed but have **never run** — this repo
-has no remote yet (ADR-001). They were validated for syntax with `actionlint`.
+Two GitHub Actions workflows cover the Go control plane and React cockpit; the
+optional CDC workflow exercises the Kafka/Debezium lane. Earlier phase reports
+record that these workflows had not run before repository publication. The
+current workflow results are authoritative for hosted checks.
 
 - `ci.yml` (PR + push to `main`, ubuntu): Go from `go.mod`, dependency cache,
   then `task fmt:check`, `vet`, `lint`, `test`, `test:race`, `build`,
   `build:linux`, `deps:verify`. The race job only succeeds on Linux.
 - `cdc-integration.yml` (PR + push + manual): runs `scripts/cdc-smoke.sh`.
 
-Once a remote exists (a later, user-authorized step), these become the merge
-gate. See `docs/PHASE_3_VALIDATION_REPORT.md` for what has and has not actually
-executed.
+See [`PHASE_8_2_VALIDATION_REPORT.md`](PHASE_8_2_VALIDATION_REPORT.md) for the
+latest local verification and the remaining public-hosting gate.
 
 ---
 

@@ -1,15 +1,19 @@
 # Implementation Roadmap — Phase 3 onward
 
+> Historical sequencing plan authored before implementation. Phases 3–8 have
+> since been delivered; see the phase validation reports and current repository
+> status in `README.md`. Public deployment remains gated by `THREAT_MODEL.md`.
+
 Supersedes the effort sketches in Phase 1's roadmap with the locked Phase-2 architecture. Phases are **gate-ordered**: a phase cannot start until the previous exit gate passed in CI (evidence = job exit codes, per Phase 1 reporting discipline). Test IDs reference `RELIABILITY_AND_FAILURE_TEST_PLAN.md`; ADR IDs reference `ARCHITECTURE_DECISIONS.md`.
 
 Codename throughout: **Fathom** (ADR-002).
 
 ---
 
-## Phase 3 — Foundation + Engine core (the next prompt's scope)
+## Phase 3 — Foundation + Engine core
 
 ### M3.1 Repo & toolchain foundation (`1–2 d`)
-Go module `github.com/Lakhyajit-96/fathom` at root; `cmd/fathom-control`, `cmd/fathom-worker`, `cmd/fathom-relay` stubs; `golang-migrate` wiring; env-only config (struct with defaults; `.env.example` with obviously-fake values); `Taskfile` (`up/lite`, `up-cdc`, `test`, `lint`, `demo`); golangci-lint (+ the RT-08 hygiene greps: no tracked `password:`, bare `host:port` dsn/servers lint, digest-pinned images check); GitHub Actions `ci.yml` (Linux: unit+contract+integration with testcontainers; Windows lane: pure tiers) — **still no remote until user authorizes publication; workflow file lands ready**.
+Go module `github.com/Lakhyajit-96/fathom` at root; `cmd/fathom-control`, `cmd/fathom-worker`, `cmd/fathom-relay` stubs; `golang-migrate` wiring; env-only config (struct with defaults; `.env.example` with obviously-fake values); `Taskfile` (`up/lite`, `up-cdc`, `test`, `lint`, `demo`); golangci-lint (+ the RT-08 hygiene greps: no tracked `password:`, bare `host:port` dsn/servers lint, digest-pinned images check); GitHub Actions `ci.yml` (Linux: unit+contract+integration with testcontainers; Windows lane: pure tiers). Publication was later authorized and is recorded in the current repository status.
 **Gate 3.1:** `go build ./...`, `go vet ./...`, `gofmt -l`, lint, CI-equivalent task suite green on Windows host with `CGO_ENABLED=0` **and** via Linux container; migrations up/down cycle clean; zero secrets tracked.
 
 ### M3.2 Schema & store (`2–3 d`) — depends on M3.1

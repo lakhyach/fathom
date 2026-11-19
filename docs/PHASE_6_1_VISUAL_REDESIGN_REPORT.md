@@ -12,7 +12,7 @@ validation against the **live backend**.
 Hard boundaries honoured throughout:
 - No backend semantics were changed to satisfy the UI. No metric was invented.
 - No remote, push, deploy, domain purchase, or public exposure was performed.
-- Work confined to `E:\Projects\fathom-workflow`. All prior commits preserved.
+- Work confined to this repository. All prior commits preserved.
 - One local commit at the end, only after gates + full-diff review. Then STOP
   (no Phase 7 work begun).
 

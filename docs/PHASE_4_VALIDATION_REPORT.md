@@ -1,6 +1,6 @@
 # Phase 4 — Validation Report
 
-**Project:** Fathom (`E:\Projects\fathom-workflow`)
+**Project:** Fathom (repository root)
 **Scope:** Durable workflow-engine core, PostgreSQL transactions, state-machine proof (Phase 4 brief §11 deliverable).
 **Baseline:** Phase 3 commit `f260db8`, on top of Phase 2 `a145d57`. **No remote is configured** (verified: `git remote -v` empty; branch `main`). Phase 2/3 history is preserved; this phase adds one new local commit only.
 
@@ -124,7 +124,7 @@ Command (reproducible):
 
 ```
 docker run --rm --network fathom-int \
-  -v E:\Projects\fathom-workflow:/src -v fathom-gomod:/go/pkg/mod -w /src \
+  -v .:/src -v fathom-gomod:/go/pkg/mod -w /src \
   -e CGO_ENABLED=1 \
   -e FATHOM_TEST_DATABASE_URL=postgres://fathom:changeme-integration-only@fathom-int-pg:5432/fathom?sslmode=disable \
   golang:1.26.5-bookworm sh -c "go test -race -count=1 -tags integration ./internal/store/..."

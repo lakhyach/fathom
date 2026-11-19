@@ -409,6 +409,7 @@ export function KpiCard({
   sub,
   icon,
   visual,
+  artwork,
   accent,
   tone = "neutral",
   index = 0,
@@ -421,6 +422,8 @@ export function KpiCard({
   icon?: ReactNode;
   /** per-card mini-visualization built from the same real numbers */
   visual?: ReactNode;
+  /** decorative, non-data artwork shown behind the factual card content */
+  artwork?: ReactNode;
   /** this card's own hue — coordinated with, not identical to, its neighbours */
   accent?: string;
   tone?: StatusTone | "neutral";
@@ -471,6 +474,14 @@ export function KpiCard({
         href && "focus-within:border-primary/40",
       )}
     >
+      {artwork && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          {artwork}
+        </div>
+      )}
       {/* each card catches light from its own corner — the reference's cards are
           lit objects, not outlined ones. Opacity lifts on hover. */}
       <span

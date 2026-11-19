@@ -1,7 +1,7 @@
 # Product Specification — Fathom (codename)
 
 **Status:** normative specification, Phase 2. Nothing here is a claim that a capability exists — every requirement is unimplemented until a named test in `RELIABILITY_AND_FAILURE_TEST_PLAN.md` passes.
-**Evidence base:** the Phase 1 audit of `semotpan/saga-orchestration-go` (defect IDs `DS-1…DS-14`, all six documents under `E:\Projects\saga-orchestration-go\docs\`).
+**Evidence base:** the Phase 1 audit of [`semotpan/saga-orchestration-go`](https://github.com/semotpan/saga-orchestration-go) (defect IDs `DS-1…DS-14`, six audit documents retained in the original development workspace).
 
 ---
 

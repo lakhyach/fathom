@@ -1,7 +1,7 @@
 # PHASE 6.3 — NUNATAK FULL-APPLICATION PREMIUM COCKPIT REPORT
 
 **Project:** Nunatak — Workflow Orchestration Cockpit
-**Repository:** `E:\Projects\fathom-workflow`
+**Repository:** this repository
 **Baseline commit:** `f24bd16` (Phase 6.2)
 **Scope:** Entire frontend (`web/`), shared design system, every route, reusable components, real-data visualizations.
 **Mode:** Autonomous implementation + testing + visual validation + reporting.
@@ -256,7 +256,7 @@ Fixed defects introduced during this phase (evidence of clean-up):
 
 ## 12. Git commit and final working-tree status
 
-- Work confined to `E:\Projects\fathom-workflow` (branch `main`, baseline `f24bd16`). All
+- Work confined to this repository (branch `main`, baseline `f24bd16`). All
   prior commits preserved.
 - **No remote, no push, no deploy** (§19).
 - The screenshot binaries in `.artifacts/` are **gitignored** so they are not committed
@@ -447,7 +447,7 @@ No fake fuzzy server search is implied.
 
 ## 20. Part II commit status
 
-- Confined to `E:\Projects\fathom-workflow`, branch `main`, directly on top of `5fa1b4b`.
+- Confined to this repository, branch `main`, directly on top of `5fa1b4b`.
 - **Exactly one** new local commit for this phase: the cmdk + motion dependency additions,
   the 3 new files, the 3 integration edits, and this Part II report.
 - **No remote, no push, no deploy.** `.artifacts/` (screenshots + CDP capture script/report)
