@@ -15,8 +15,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	"github.com/Lakhyajit-96/fathom/internal/id"
+	"github.com/lakhyach/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/id"
 )
 
 // T-INT tier (RELIABILITY_AND_FAILURE_TEST_PLAN §1). These run only under the

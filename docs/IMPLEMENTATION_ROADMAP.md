@@ -13,7 +13,7 @@ Codename throughout: **Fathom** (ADR-002).
 ## Phase 3 — Foundation + Engine core
 
 ### M3.1 Repo & toolchain foundation (`1–2 d`)
-Go module `github.com/Lakhyajit-96/fathom` at root; `cmd/fathom-control`, `cmd/fathom-worker`, `cmd/fathom-relay` stubs; `golang-migrate` wiring; env-only config (struct with defaults; `.env.example` with obviously-fake values); `Taskfile` (`up/lite`, `up-cdc`, `test`, `lint`, `demo`); golangci-lint (+ the RT-08 hygiene greps: no tracked `password:`, bare `host:port` dsn/servers lint, digest-pinned images check); GitHub Actions `ci.yml` (Linux: unit+contract+integration with testcontainers; Windows lane: pure tiers). Publication was later authorized and is recorded in the current repository status.
+Go module `github.com/lakhyach/fathom` at root; `cmd/fathom-control`, `cmd/fathom-worker`, `cmd/fathom-relay` stubs; `golang-migrate` wiring; env-only config (struct with defaults; `.env.example` with obviously-fake values); `Taskfile` (`up/lite`, `up-cdc`, `test`, `lint`, `demo`); golangci-lint (+ the RT-08 hygiene greps: no tracked `password:`, bare `host:port` dsn/servers lint, digest-pinned images check); GitHub Actions `ci.yml` (Linux: unit+contract+integration with testcontainers; Windows lane: pure tiers). Publication was later authorized and is recorded in the current repository status.
 **Gate 3.1:** `go build ./...`, `go vet ./...`, `gofmt -l`, lint, CI-equivalent task suite green on Windows host with `CGO_ENABLED=0` **and** via Linux container; migrations up/down cycle clean; zero secrets tracked.
 
 ### M3.2 Schema & store (`2–3 d`) — depends on M3.1
@@ -68,7 +68,7 @@ Hard rules: no UI before Gate 3; no CDC lane before Gate 3 (it inherits the conf
 
 ## Prerequisites still open before/inside Phase 3
 
-1. **User authorization:** module path `github.com/Lakhyajit-96/fathom` assumed for eventual publication; if the public repo will differ, say now (module rename is cheap at M3.1, expensive after).
+1. **User authorization:** module path `github.com/lakhyach/fathom` assumed for eventual publication; if the public repo will differ, say now (module rename is cheap at M3.1, expensive after).
 2. GitHub publication itself remains **unauthorized** — CI files ship dark, enabled at publication time.
 3. Postgres 17 in containers (host has none) — acceptable; testcontainers covers it.
 4. Naming: codename **Fathom** is internal-only until the Phase-7 brand check (ADR-002).

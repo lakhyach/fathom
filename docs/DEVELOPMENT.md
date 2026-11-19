@@ -233,7 +233,7 @@ internal/health/     /healthz (never touches deps) + /readyz (DB + relay-lag thr
 internal/metrics/    Prometheus series wired only to real operations
 internal/tracing/    W3C traceparent mint/propagate (contract-level; OTLP exporter deferred)
 db/                  embedded versioned migrations 0001+0002 (FS consumed by internal/store/postgres)
-tools/               SEPARATE go module (github.com/Lakhyajit-96/fathom/tools) — probe-only deps NOT in product builds:
+tools/               SEPARATE go module (github.com/lakhyach/fathom/tools) — probe-only deps NOT in product builds:
   portprobe/           blank-import CGO portability matrix (ADR-005 evidence)
   kafkasmoke/          franz-go round-trip verifier used by the CDC smoke (kadm admin ops live here)
 deploy/              docker-compose.smoke.yaml + connector JSON + postgres init (smoke only, not a deployment)

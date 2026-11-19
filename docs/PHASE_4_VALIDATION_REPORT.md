@@ -64,15 +64,15 @@ sc product exit=0
 sc tools exit=0
 
 ### UNIT TESTS (no integration tag) ###
-?   	github.com/Lakhyajit-96/fathom/cmd/fathom       	[no test files]
-?   	github.com/Lakhyajit-96/fathom/db               	[no test files]
-ok  	github.com/Lakhyajit-96/fathom/internal/app             	4.751s
-ok  	github.com/Lakhyajit-96/fathom/internal/config          	4.569s
-ok  	github.com/Lakhyajit-96/fathom/internal/engine          	4.309s
-ok  	github.com/Lakhyajit-96/fathom/internal/hygiene         	4.350s
-ok  	github.com/Lakhyajit-96/fathom/internal/id              	4.320s
-ok  	github.com/Lakhyajit-96/fathom/internal/logging         	4.718s
-ok  	github.com/Lakhyajit-96/fathom/internal/store/postgres  	4.535s
+?   	github.com/lakhyach/fathom/cmd/fathom       	[no test files]
+?   	github.com/lakhyach/fathom/db               	[no test files]
+ok  	github.com/lakhyach/fathom/internal/app             	4.751s
+ok  	github.com/lakhyach/fathom/internal/config          	4.569s
+ok  	github.com/lakhyach/fathom/internal/engine          	4.309s
+ok  	github.com/lakhyach/fathom/internal/hygiene         	4.350s
+ok  	github.com/lakhyach/fathom/internal/id              	4.320s
+ok  	github.com/lakhyach/fathom/internal/logging         	4.718s
+ok  	github.com/lakhyach/fathom/internal/store/postgres  	4.535s
 unit exit=0
 TOTAL unit PASS=47 FAIL=0
 
@@ -102,13 +102,13 @@ TOTAL unit PASS=47 FAIL=0
 ```
 go version go1.26.5 linux/amd64
 gcc (Debian 12.2.0-14+deb12u1) 12.2.0
-ok   github.com/Lakhyajit-96/fathom/internal/app              1.120s
-ok   github.com/Lakhyajit-96/fathom/internal/config           1.020s
-ok   github.com/Lakhyajit-96/fathom/internal/engine           1.148s
-ok   github.com/Lakhyajit-96/fathom/internal/hygiene          1.451s
-ok   github.com/Lakhyajit-96/fathom/internal/id               1.043s
-ok   github.com/Lakhyajit-96/fathom/internal/logging          1.013s
-ok   github.com/Lakhyajit-96/fathom/internal/store/postgres   1.018s
+ok   github.com/lakhyach/fathom/internal/app              1.120s
+ok   github.com/lakhyach/fathom/internal/config           1.020s
+ok   github.com/lakhyach/fathom/internal/engine           1.148s
+ok   github.com/lakhyach/fathom/internal/hygiene          1.451s
+ok   github.com/lakhyach/fathom/internal/id               1.043s
+ok   github.com/lakhyach/fathom/internal/logging          1.013s
+ok   github.com/lakhyach/fathom/internal/store/postgres   1.018s
 ```
 
 **4b. Integration tier, `-race`, against live PostgreSQL 17.11** (Go container attached to the `fathom-int` Docker network so it reaches the DB by name). The two concurrency tests run under the race detector with **zero data-race reports**:
@@ -117,7 +117,7 @@ ok   github.com/Lakhyajit-96/fathom/internal/store/postgres   1.018s
 --- PASS: TestStore_ConcurrentWritersSameVersion          (0.03s)
 --- PASS: TestStore_ConcurrentCreateSameIdempotencyKey    (0.04s)
 PASS
-ok   github.com/Lakhyajit-96/fathom/internal/store/postgres  1.609s
+ok   github.com/lakhyach/fathom/internal/store/postgres  1.609s
 ```
 
 Command (reproducible):
@@ -159,7 +159,7 @@ DROP SCHEMA / CREATE SCHEMA / GRANT  (reset exit=0)
 --- PASS: TestStore_NotFoundIsNotSilent                         (absent row -> NotFoundError, not a masked fault)
 --- PASS: TestStore_MigrateDownRoundTrip                        (down -> version 0, all durable tables gone; re-up -> v1 live)
 PASS
-ok   github.com/Lakhyajit-96/fathom/internal/store/postgres  6.144s   (18 PASS)
+ok   github.com/lakhyach/fathom/internal/store/postgres  6.144s   (18 PASS)
 ```
 
 **Down-migration / rollback proof** (`TestStore_MigrateDownRoundTrip`): reverses `0001` via the embedded `.down.sql`, asserts migrate version returns to nil and every durable table is gone, then re-applies up and drives a full workflow to `COMPLETED` on the recreated schema. Rollback is **only** exercised against a throwaway DB; the brief (§4) forbids promising a data-loss-free down in production, and this phase makes no such promise.

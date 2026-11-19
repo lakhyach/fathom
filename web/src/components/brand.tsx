@@ -1,11 +1,7 @@
-/* Nunatak brand mark — an alpine nunatak: a two-peak ridge with a lit snow cap
-   over a shaded body. One geometry is shared by the rail, the favicon and every
-   web-app icon, so the product identity is the same shape at 16px and 26px.
-   The gradient runs through CSS variables in the app and through literal hex in
-   the standalone favicon, where no stylesheet is attached. */
+/* Fathom mark: a luminous depth pin above three steady contour lines. */
 import type { SVGProps } from "react";
 
-export function NunatakMark({
+export function FathomMark({
   size = 24,
   ...rest
 }: SVGProps<SVGSVGElement> & { size?: number }) {
@@ -19,26 +15,18 @@ export function NunatakMark({
       {...rest}
     >
       <path
-        d="M2.6 26.2 11.6 8.2l4.8 8.9 3.3-5.7 9.7 14.8z"
-        fill="url(#nunatak-body)"
+        d="M16 4.5v8.2"
+        stroke="var(--lime-bright, #aee762)"
+        strokeWidth="2.4"
+        strokeLinecap="round"
       />
+      <circle cx="16" cy="5" r="3" fill="var(--lime-bright, #aee762)" />
       <path
-        d="M11.6 8.2 8.7 14.3l2.9-1 2.6 2.1z"
-        fill="var(--lime-bright, #aee762)"
+        d="M5.5 15.2c3.1-2.3 6.6-3.4 10.5-3.4s7.4 1.1 10.5 3.4M7.8 20.1c2.5-1.5 5.2-2.3 8.2-2.3s5.7.8 8.2 2.3M10.2 24.8c1.8-.8 3.7-1.2 5.8-1.2s4 .4 5.8 1.2"
+        stroke="var(--primary, #67c352)"
+        strokeWidth="2.2"
+        strokeLinecap="round"
       />
-      <defs>
-        <linearGradient
-          id="nunatak-body"
-          x1="6"
-          y1="9"
-          x2="26"
-          y2="27"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="var(--primary, #67c352)" />
-          <stop offset="1" stopColor="var(--moss, #40913d)" />
-        </linearGradient>
-      </defs>
     </svg>
   );
 }

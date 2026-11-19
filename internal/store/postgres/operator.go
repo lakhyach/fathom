@@ -8,9 +8,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	"github.com/Lakhyajit-96/fathom/internal/tracing"
+	"github.com/lakhyach/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/id"
+	"github.com/lakhyach/fathom/internal/tracing"
 )
 
 // Operator is the authenticated identity behind a privileged call (ADR-013,

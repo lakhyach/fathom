@@ -1,75 +1,139 @@
-# Nunatak — workflow control plane
+# Fathom
 
-*(Internal codename **Fathom**; the Go module path, `fathom` binary/modes and
-`fathom_*` metric series intentionally keep that name — “Nunatak” is the visible
-product name for the operations cockpit.)*
+**Durable workflow orchestration with a live operator cockpit.** Fathom records each workflow transition in PostgreSQL, runs recoverable steps through workers, and gives operators a clear view of execution, failures, audit history, and system health.
 
-A distributed **workflow control plane** with a polling operations cockpit:
-observable, recoverable workflow execution with verifiable failure handling.
+[![CI](https://github.com/lakhyach/fathom/actions/workflows/ci.yml/badge.svg)](https://github.com/lakhyach/fathom/actions/workflows/ci.yml)
+[![CDC integration](https://github.com/lakhyach/fathom/actions/workflows/cdc-integration.yml/badge.svg)](https://github.com/lakhyach/fathom/actions/workflows/cdc-integration.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **Status: the Go control plane and React cockpit are implemented through Phase 8.2 and validated locally.** Engine, persistence, workers, recovery scheduler, REST API, and relay evidence is in the Phase 3–5 reports; cockpit and visual acceptance evidence is in the Phase 6–8.2 reports. Public hosting remains gated on production API/authentication design. See the [Phase 8.2 validation report](docs/PHASE_8_2_VALIDATION_REPORT.md).
-> Nothing in this repository may be described as "implemented" unless a named test
-> proves it. See `docs/` for contracts and validation evidence.
+> Fathom is a portfolio and engineering demo, currently intended for local development. The browser app and Go control plane run end to end locally. Public hosting needs a production network and authentication review plus separately hosted API, workers, database, and event relay. A static Vercel deployment by itself would not run the workflow engine.
 
-This is currently a **local-first demo/portfolio project**, not a public service.
-The cockpit expects the same-origin Vite proxy and the Go API enforces a loopback
-bind. Public hosting needs a reviewed production API/authentication design and the
-deployment controls in `docs/THREAT_MODEL.md`; deploying the static cockpit alone
-would leave it disconnected from workflow data.
+## What it does
 
-## Provenance
+- **Durable workflow state:** PostgreSQL transactions, versioned migrations, idempotent creation, and a durable audit trail.
+- **Recoverable execution:** worker leases and fencing, retry scheduling, deadline handling, and dead-letter operations.
+- **Protected control API:** bearer authentication, reader/operator/admin roles, rate limits, stable problem responses, and idempotency keys.
+- **Operator cockpit:** overview, workflow list and detail, dead-letter queue, events and audit, metrics and health, and configuration screens.
+- **Honest observability:** health/readiness endpoints and Prometheus metrics sourced from real engine and database state.
+- **Optional event transport:** Kafka outbox publishing and a separate Kafka/Debezium integration smoke workflow.
 
-This is an **original implementation in a new repository with no git history from
-upstream**. Design concepts were informed by
-[`semotpan/saga-orchestration-go`](https://github.com/semotpan/saga-orchestration-go)
-(MIT, Copyright (c) 2023 Serghei Motpan), audited in October 2026. Three mechanisms
-were re-used **as concepts only, re-implemented from scratch**; everything else is
-new. Full ledger: [`docs/ATTRIBUTION_AND_LICENSES.md`](docs/ATTRIBUTION_AND_LICENSES.md).
+The built-in `echo` participant is a deterministic **development sample** used to demonstrate workflow execution. It is not business logic or a production participant.
 
-The upstream project is attributed and linked below. This repository is
-independent and must never push to the upstream author's repo.
+## Architecture
 
-## Local development
-
-Start PostgreSQL 17+, then set `FATHOM_DATABASE_URL`, `FATHOM_API_KEYS`, and
-`FATHOM_DEV_ECHO=1` in one shell and run `go run ./cmd/fathom`. In another
-shell, run `cd web`, `npm ci`, and `npm run dev`; open `http://127.0.0.1:5173`
-and enter one of the configured `label:role:key` values in Settings. The `.env.example`
-file contains placeholders for reference; the app reads environment variables
-and does not load `.env` files. Full setup and CI commands are in
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
-
-## Repository layout
-
-```
-docs/          specification deliverables (the contracts) + per-phase checklists & validation reports
-cmd/fathom/    ONE binary, modes: control | worker | relay | all       (Phase 5)
-internal/      engine, store, worker, scheduler, relay, api, health, metrics, tracing (Phase 5)
-db/            embedded versioned migrations 0001–0002                 (Phase 4–5)
-deploy/        docker compose smoke (Kafka+Debezium CDC proof)         (Phase 3)
-web/           operations cockpit (React SPA) — Vite + React 19 + Tailwind v4 + shadcn/ui + React Flow   (Phases 6 → 7)
-tools/         separate module: CGO portability probe + franz-go round-trip smoke
-.github/workflows/  CI for Go + frontend; optional CDC integration smoke
+```mermaid
+flowchart LR
+  Browser[React cockpit] -->|same-origin API requests| API[Go control API]
+  API --> PG[(PostgreSQL 17+)]
+  Scheduler[Recovery scheduler] --> PG
+  Worker[Workflow worker] --> PG
+  PG --> Outbox[Transactional outbox]
+  Outbox --> Relay[Go relay]
+  Relay --> Kafka[(Kafka, optional)]
 ```
 
-## Toolchain
+For local development, Vite proxies `/v1`, `/healthz`, `/readyz`, and `/metrics` to the loopback Go API. PostgreSQL stores workflows, step state, attempts, leases, outbox records, definitions, operator actions, and audit events. The standalone CDC smoke stack is only a compatibility check; it is not the product deployment.
 
-| Tool | Version |
+## Run locally
+
+### Requirements
+
+- Go `1.26.5`
+- Node.js `24` and npm
+- PostgreSQL `17` or later
+- Docker Compose only for the optional CDC integration check
+
+Create a local PostgreSQL database and role, then prepare the ignored environment file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Replace the database URL and API-key placeholders in `.env` with local values. The API reads process environment variables; it does **not** parse `.env` by itself. Import the values in PowerShell and start the Go service:
+
+```powershell
+Get-Content .env | Where-Object { $_ -match '^\s*[^#][^=]*=' } | ForEach-Object {
+  $name, $value = $_ -split '=', 2
+  [Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim(), 'Process')
+}
+go run ./cmd/fathom
+```
+
+The service applies embedded database migrations during startup. In another terminal, start the cockpit:
+
+```powershell
+cd web
+npm ci
+npm run dev
+```
+
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). In **Settings**, enter the matching key from `FATHOM_API_KEYS`. With `FATHOM_DEV_ECHO=1`, register an `echo` step definition and place a workflow to see it complete through the worker and PostgreSQL ledger.
+
+Keep `.env` local. It is covered by `.gitignore`; never put real database passwords or API keys in source, issue reports, screenshots, or browser URLs.
+
+## Verify changes
+
+From the repository root:
+
+```powershell
+go test ./...
+go vet ./...
+go build ./...
+```
+
+For the cockpit:
+
+```powershell
+cd web
+npm run typecheck
+npm test
+npm run lint
+npm run build
+```
+
+The hosted CI workflow runs Go formatting, vet, static analysis, unit and race tests, portability builds, dependency checks, and the frontend typecheck/test/lint/build pipeline. The CDC workflow starts pinned PostgreSQL, Kafka, and Debezium containers and verifies an outbox event reaches Kafka.
+
+## Project layout
+
+| Path | Purpose |
 | --- | --- |
-| Go | `go1.26.5 windows/amd64` (`CGO_ENABLED=0` builds — no C toolchain required) |
-| Node / npm | `v24.16.0` / `11.13.0` |
-| Git | `2.54.0.windows.1` |
-| Docker Engine / Compose | `29.7.2` / `v5.5.0` (note: Compose v5 rejects `--progress` on `up`) |
-| PostgreSQL target | 17+ (`postgres` role, non-root) — engine state, outbox, leases, audit |
+| `cmd/fathom/` | Single Go entry point with `control`, `worker`, `relay`, and `all` modes |
+| `internal/engine/` | Deterministic workflow state machine |
+| `internal/store/postgres/` | PostgreSQL persistence, migrations, leases, outbox, and operator actions |
+| `internal/worker/` | Durable step claiming and participant execution |
+| `internal/scheduler/` | Retry and timeout recovery |
+| `internal/api/` | HTTP control plane, authentication, RBAC, and REST handlers |
+| `internal/relay/` | Outbox relay and optional Kafka publisher |
+| `web/` | React 19 + TypeScript operations cockpit |
+| `db/` | Embedded, versioned schema migrations |
+| `deploy/` | Kafka/Debezium compatibility smoke stack (not a product deployment) |
+| `docs/` | Product specification, architecture decisions, threat model, contracts, and phase validation reports |
+| `.github/workflows/` | Go/frontend CI and CDC integration check |
 
-## Read in order
+## Runtime modes
 
-1. `docs/PRODUCT_SPECIFICATION.md` — what we are building and for whom
-2. `docs/ARCHITECTURE_DECISIONS.md` — every locked decision + evidence + rejected alternatives
-3. `docs/WORKFLOW_STATE_MACHINE.md` — the normative state machine
-4. `docs/DATA_AND_API_CONTRACTS.md` — schema + REST/SSE contracts
-5. `docs/RELIABILITY_AND_FAILURE_TEST_PLAN.md` — acceptance tests derived from Phase 1 defects
-6. `docs/OBSERVABILITY_AND_UI_SPECIFICATION.md` — cockpit spec
-7. `docs/IMPLEMENTATION_ROADMAP.md` — Phase 3+ sequence and gates
-8. `docs/THREAT_MODEL.md` — trust boundaries and mitigations
-9. `docs/ATTRIBUTION_AND_LICENSES.md` — provenance and dependency licenses
+| Mode | Runs | Requirements |
+| --- | --- | --- |
+| `control` | HTTP API and recovery scheduler | PostgreSQL and `FATHOM_API_KEYS` |
+| `worker` | Participant worker | PostgreSQL and a registered participant |
+| `relay` | Outbox-to-Kafka relay | PostgreSQL and `FATHOM_KAFKA_BROKERS` |
+| `all` | Every configured local subsystem | PostgreSQL; optional Kafka and development echo participant |
+
+The API binds to loopback by default and refuses non-loopback binding while bearer keys are the only security boundary. See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) before changing deployment boundaries.
+
+## Documentation
+
+- [Product specification](docs/PRODUCT_SPECIFICATION.md)
+- [Architecture decisions](docs/ARCHITECTURE_DECISIONS.md)
+- [Workflow state machine](docs/WORKFLOW_STATE_MACHINE.md)
+- [Data and API contracts](docs/DATA_AND_API_CONTRACTS.md)
+- [Reliability and failure test plan](docs/RELIABILITY_AND_FAILURE_TEST_PLAN.md)
+- [Observability and UI specification](docs/OBSERVABILITY_AND_UI_SPECIFICATION.md)
+- [Development guide](docs/DEVELOPMENT.md)
+- [Threat model and hosting gates](docs/THREAT_MODEL.md)
+- [Phase 8.2 validation report](docs/PHASE_8_2_VALIDATION_REPORT.md)
+- [Attribution and dependency licences](docs/ATTRIBUTION_AND_LICENSES.md)
+
+## Licence and provenance
+
+Released under the [MIT License](LICENSE). The repository is an original implementation. Design concepts informed by `semotpan/saga-orchestration-go` are documented in [Attribution and Licences](docs/ATTRIBUTION_AND_LICENSES.md); implementation code was written for this project.

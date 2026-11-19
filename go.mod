@@ -1,4 +1,4 @@
-module github.com/Lakhyajit-96/fathom
+module github.com/lakhyach/fathom
 
 go 1.26.5
 

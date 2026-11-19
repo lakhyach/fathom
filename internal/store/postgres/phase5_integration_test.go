@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	"github.com/Lakhyajit-96/fathom/internal/id"
+	"github.com/lakhyach/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/id"
 )
 
 // Phase-5 T-INT store tier: worker claiming/leases, the SubmitResult lease

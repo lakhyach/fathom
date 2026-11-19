@@ -16,7 +16,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/config"
+	"github.com/lakhyach/fathom/internal/config"
 )
 
 // Component is a subsystem with a bounded, context-aware shutdown. Each

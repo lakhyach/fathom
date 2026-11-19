@@ -38,8 +38,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/id"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Publisher delivers a batch of claimed outbox rows. Returning nil means

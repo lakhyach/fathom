@@ -1,9 +1,9 @@
 /* ============================================================================
-   Nunatak — Phase 8 "Verdant Frame" visual system.
+   Fathom — Phase 8 "Verdant Frame" visual system.
    Derived by measurement from the operator's reference dashboard
    (.artifacts/p8/reference.png, 1200x900): every surface, accent and radius
    below is the oklch round-trip of a pixel sampled from that image, re-hued
-   where Nunatak's engine semantics need a state the reference never had.
+   where Fathom's engine semantics need a state the reference never had.
    Tailwind v4 + shadcn/ui token contract. Dark-only. The Phase 7
    "Glacier Glass" layer it replaces is deleted, not overridden.
    ========================================================================== */
@@ -237,12 +237,8 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    /* The fallback field is the DARK end on purpose. Body used to carry the
-       flat mid-green --atmosphere, and the moment the painted canvas outgrew
-       the element that drew the gradient, that flat colour showed through as
-       an unexplained green band under the frame. */
     @apply text-foreground font-sans antialiased;
-    background-color: var(--atmosphere-deep);
+    background-color: var(--canvas);
     /* Outfit is wider than a neo-grotesque; a hair of negative tracking keeps
        dense UI copy compact without making small labels look cramped. */
     font-size: 14px;
@@ -250,20 +246,6 @@
     letter-spacing: -0.006em;
     font-feature-settings: "ss01";
     min-height: 100dvh;
-  }
-  /* The ambient field lives on a fixed layer sized to the visual viewport, not
-     on the shell box. A viewport-unit box (h-dvh) can end above the canvas it
-     is supposed to cover — collapsing URL bar, pinch zoom, overscroll, a
-     full-size capture, or any document taller than the shell — and the
-     remainder used to paint as a stray strip. A fixed layer cannot be
-     outgrown, so the surround is always the composed field. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: var(--atmosphere-field);
   }
   h1,
   h2,
@@ -310,68 +292,15 @@
    Surface recipes — the ONE card language of the app.
    ========================================================================== */
 
-/* The shell box is deliberately VIEWPORT-BOUNDED, not merely viewport-minimum:
-   a definite height is what lets the inner content region scroll instead of
-   inflating the document and pushing the frame past the canvas. It no longer
-   carries the ambient field — that moved to the fixed body layer — so being
-   shorter than the canvas can no longer strand a flat strip. */
+/* The app occupies the browser viewport; each route scrolls inside the shell. */
 @utility shell-viewport {
   height: 100vh;
   height: 100dvh;
 }
 
-/* The ambient field is drawn once, on the fixed body layer, from
-   --atmosphere-field. The reference's diagonal rays enter at the upper centre
-   and run down to the right as three wide bands at deliberately different
-   angles and widths, each bright enough to read only where the light falls —
-   a repeating pattern is what made an earlier pass look like tiled CSS. */
-
-/* The application frame: a large near-black panel floating on the atmosphere,
-   carrying the reference's directional green interior glow from its top-left. */
+/* The shell is the canvas itself, with no floating frame or outer backdrop. */
 @utility surface-frame {
-  background:
-    linear-gradient(
-      118deg,
-      transparent 0 14%,
-      oklch(0.9 0.15 132 / 9%) 20%,
-      transparent 26% 100%
-    ),
-    linear-gradient(
-      118deg,
-      transparent 0 26%,
-      oklch(0.86 0.14 133 / 9%) 35%,
-      transparent 45% 100%
-    ),
-    linear-gradient(
-      126deg,
-      transparent 0 48%,
-      oklch(0.86 0.14 133 / 6%) 57%,
-      transparent 68% 100%
-    ),
-    radial-gradient(
-      84% 52% at 50% -10%,
-      oklch(0.6 0.16 135 / 26%),
-      transparent 68%
-    ),
-    radial-gradient(
-      58% 44% at 4% -2%,
-      oklch(0.52 0.13 137 / 24%),
-      transparent 64%
-    ),
-    radial-gradient(
-      40% 34% at 30% 0%,
-      oklch(0.62 0.16 133 / 12%),
-      transparent 70%
-    ),
-    radial-gradient(
-      120% 100% at 100% 100%,
-      oklch(0.1 0.02 145 / 60%),
-      transparent 55%
-    ),
-    var(--canvas);
-  border: 1px solid oklch(0.93 0.02 140 / 7%);
-  border-radius: var(--radius-frame);
-  box-shadow: var(--shadow-frame);
+  background: var(--canvas);
 }
 
 /* Standard panel. Luminance does the separating; the border is a declaration

@@ -18,8 +18,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/engine"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Config bounds the loop. Zero values select the SM §8 defaults.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/engine"
 	"github.com/jackc/pgx/v5"
 )
 

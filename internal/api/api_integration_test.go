@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/id"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // API-tier T-INT tests (brief §6 + §9.11–14): real HTTP through the real

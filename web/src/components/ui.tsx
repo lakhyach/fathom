@@ -1,4 +1,4 @@
-/* Nunatak shared kit — the Phase 8 "Verdant Frame" system's only component
+/* Fathom shared kit — the Phase 8 "Verdant Frame" system's only component
    layer. Built on Tailwind v4 tokens, shadcn/ui primitives (Radix), Lucide
    icons and sonner toasts.
    Every control is a real semantic element; every badge pairs colour with

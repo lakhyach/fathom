@@ -17,8 +17,8 @@ in this environment, with the reason) / **NOT RUN** (not executed here).
 | Docker Engine / Compose | `29.7.2` / `v5.5.0` (daemon live) | ✅ |
 | gcc / C toolchain | **absent** (`where gcc` → not found) — drives the race BLOCKED case | ✅ |
 
-Two Go modules: product `github.com/Lakhyajit-96/fathom` and non-product
-`github.com/Lakhyajit-96/fathom/tools`.
+Two Go modules: product `github.com/lakhyach/fathom` and non-product
+`github.com/lakhyach/fathom/tools`.
 
 ## 1. Validation matrix (executed on the Windows dev host unless noted)
 

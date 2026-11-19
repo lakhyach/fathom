@@ -38,16 +38,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/api"
-	"github.com/Lakhyajit-96/fathom/internal/app"
-	"github.com/Lakhyajit-96/fathom/internal/config"
-	"github.com/Lakhyajit-96/fathom/internal/logging"
-	"github.com/Lakhyajit-96/fathom/internal/participant"
-	"github.com/Lakhyajit-96/fathom/internal/relay"
-	"github.com/Lakhyajit-96/fathom/internal/relay/kafka"
-	"github.com/Lakhyajit-96/fathom/internal/scheduler"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
-	"github.com/Lakhyajit-96/fathom/internal/worker"
+	"github.com/lakhyach/fathom/internal/api"
+	"github.com/lakhyach/fathom/internal/app"
+	"github.com/lakhyach/fathom/internal/config"
+	"github.com/lakhyach/fathom/internal/logging"
+	"github.com/lakhyach/fathom/internal/participant"
+	"github.com/lakhyach/fathom/internal/relay"
+	"github.com/lakhyach/fathom/internal/relay/kafka"
+	"github.com/lakhyach/fathom/internal/scheduler"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/worker"
 )
 
 func main() {

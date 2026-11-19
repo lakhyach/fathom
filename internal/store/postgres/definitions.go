@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/engine"
 )
 
 // Workflow definitions (DATA §A.1, SM §1). The definition table is the only

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Wire DTOs. The store views carry JSONB columns as []byte, which encoding/json

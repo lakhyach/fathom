@@ -14,10 +14,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Lakhyajit-96/fathom/internal/health"
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	"github.com/Lakhyajit-96/fathom/internal/metrics"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/health"
+	"github.com/lakhyach/fathom/internal/id"
+	"github.com/lakhyach/fathom/internal/metrics"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Defaults fixed by DATA §B: page size 25 (cap 100), request bodies 1 MiB,

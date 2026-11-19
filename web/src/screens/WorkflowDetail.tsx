@@ -1,4 +1,4 @@
-/* Execution inspector — the signature Nunatak surface: a global KPI strip, an
+/* Execution inspector — the signature Fathom surface: a global KPI strip, an
    execution header, the workflow graph as the centrepiece with a real progress
    bar, a right-hand details rail, a tab strip, and lower operations panels
    (selected step · event log · execution metrics). Every value is a real

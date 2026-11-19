@@ -34,7 +34,7 @@ export interface RequestOptions {
   okStatuses?: number[];
 }
 
-export class NunatakClient {
+export class FathomClient {
   private cfg: ClientConfig;
   constructor(cfg: ClientConfig) {
     this.cfg = cfg;

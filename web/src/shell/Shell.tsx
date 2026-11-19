@@ -1,4 +1,4 @@
-/* Nunatak shell — Phase 8 "Verdant Frame".
+/* Fathom shell — Phase 8 "Verdant Frame".
    The reference composes the product as a device: a forest-lit atmosphere, a
    large near-black frame floating inside it, and a slim neutral rail of icons
    down the left edge. That structure is applied here once, so every route
@@ -47,7 +47,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { NunatakMark } from "@/components/brand";
+import { FathomMark } from "@/components/brand";
 import { CreateWorkflowModal } from "../components/CreateWorkflowModal";
 import { useToast } from "../components/ui";
 import { CommandMenu } from "./CommandMenu";
@@ -163,15 +163,15 @@ export function Shell() {
 
   return (
     <TooltipProvider delayDuration={220}>
-      <div className="shell-viewport flex items-stretch justify-center p-2.5 sm:p-4 lg:p-[clamp(1.75rem,5vh,2.75rem)]">
+      <div className="shell-viewport flex items-stretch justify-center p-0">
         <a
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-3 focus:py-1.5 focus:text-sm focus:font-semibold focus:text-primary-foreground"
-          href="#nunatak-main"
+          href="#fathom-main"
         >
           Skip to content
         </a>
 
-        <div className="surface-frame flex min-h-0 w-full max-w-[1680px] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
+        <div className="surface-frame flex min-h-0 w-full gap-3 overflow-hidden p-2 sm:gap-4 sm:p-3">
           {/* desktop rail — the reference's slim neutral pill of icons */}
           <aside className="surface-rail hidden w-[68px] shrink-0 flex-col rounded-[22px] p-2 lg:flex">
             <RailContent
@@ -377,7 +377,7 @@ export function Shell() {
             )}
 
             <main
-              id="nunatak-main"
+              id="fathom-main"
               className="min-h-0 flex-1 overflow-y-auto px-1 pt-1 pb-8 outline-none"
               tabIndex={-1}
             >
@@ -450,19 +450,19 @@ function RailContent({
     <div className="flex min-h-0 flex-1 flex-col items-center gap-3 py-1">
       <div className="flex shrink-0 items-center gap-2.5 self-stretch">
         <div className="grid size-11 shrink-0 place-items-center rounded-full border border-primary/45 bg-primary/12 shadow-[0_0_26px_-4px_oklch(0.735_0.174_140/45%)]">
-          <NunatakMark size={24} />
+          <FathomMark size={24} />
         </div>
         {labelled ? (
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-[15px] font-bold tracking-tight text-foreground">
-              Nunatak
+              Fathom
             </span>
             <span className="truncate text-[10px] text-muted-foreground">
               Workflow Orchestration
             </span>
           </div>
         ) : (
-          <span className="sr-only">Nunatak — workflow orchestration</span>
+          <span className="sr-only">Fathom — workflow orchestration</span>
         )}
         {labelled && (
           <Button

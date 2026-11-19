@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	"github.com/Lakhyajit-96/fathom/internal/participant"
-	"github.com/Lakhyajit-96/fathom/internal/scheduler"
-	"github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/id"
+	"github.com/lakhyach/fathom/internal/participant"
+	"github.com/lakhyach/fathom/internal/scheduler"
+	"github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Loop-tier T-INT tests (brief §9): real worker + real scheduler/reaper loops

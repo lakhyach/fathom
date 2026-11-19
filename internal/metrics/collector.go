@@ -22,7 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Collector reads one MetricsSnapshot per scrape.

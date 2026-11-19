@@ -20,11 +20,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	"github.com/Lakhyajit-96/fathom/internal/participant"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
-	"github.com/Lakhyajit-96/fathom/internal/tracing"
+	"github.com/lakhyach/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/id"
+	"github.com/lakhyach/fathom/internal/participant"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/tracing"
 )
 
 // Config tunes the loop. Zero values select the documented defaults.

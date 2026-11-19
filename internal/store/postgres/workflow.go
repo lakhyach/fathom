@@ -9,9 +9,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	"github.com/Lakhyajit-96/fathom/internal/tracing"
+	"github.com/lakhyach/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/id"
+	"github.com/lakhyach/fathom/internal/tracing"
 )
 
 // Wire/event constants (DATA §E, ADR-010). The relay that moves these rows to

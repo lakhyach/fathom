@@ -82,11 +82,11 @@ race reports.
 **4b. Full integration tier (`go test -race -tags integration -p 1 ./...`):**
 
 ```
-ok  github.com/Lakhyajit-96/fathom/internal/api             2.041s
-ok  github.com/Lakhyajit-96/fathom/internal/metrics         1.145s
-ok  github.com/Lakhyajit-96/fathom/internal/relay           3.227s
-ok  github.com/Lakhyajit-96/fathom/internal/store/postgres  2.195s
-ok  github.com/Lakhyajit-96/fathom/internal/worker          6.043s
+ok  github.com/lakhyach/fathom/internal/api             2.041s
+ok  github.com/lakhyach/fathom/internal/metrics         1.145s
+ok  github.com/lakhyach/fathom/internal/relay           3.227s
+ok  github.com/lakhyach/fathom/internal/store/postgres  2.195s
+ok  github.com/lakhyach/fathom/internal/worker          6.043s
 (+ app, config, engine, health, hygiene, id, logging — all ok)
 ```
 

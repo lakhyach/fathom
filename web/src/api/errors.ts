@@ -72,7 +72,7 @@ export class ConflictError extends ApiError {
 export class ConnectionError extends Error {
   readonly aborted: boolean;
   constructor(
-    message = "Cannot reach the Nunatak API (is the control plane running?)",
+    message = "Cannot reach the Fathom API (is the control plane running?)",
   ) {
     super(message);
     this.name = "ConnectionError";

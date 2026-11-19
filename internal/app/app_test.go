@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/config"
-	"github.com/Lakhyajit-96/fathom/internal/logging"
+	"github.com/lakhyach/fathom/internal/config"
+	"github.com/lakhyach/fathom/internal/logging"
 )
 
 func testApp(t *testing.T, timeout time.Duration, comps ...Component) *App {

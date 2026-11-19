@@ -28,7 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/Lakhyajit-96/fathom/db"
+	"github.com/lakhyach/fathom/db"
 )
 
 // Store owns the connection pool. It has no global state; construct one per

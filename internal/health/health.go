@@ -15,7 +15,7 @@ import (
 	"net/http"
 	"time"
 
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Check bundles the readiness parameters.

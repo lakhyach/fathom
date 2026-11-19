@@ -22,8 +22,8 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kgo"
 
-	"github.com/Lakhyajit-96/fathom/internal/relay"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/relay"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Config names the brokers. Empty Brokers is a construction error — the

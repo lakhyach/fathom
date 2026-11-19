@@ -1,4 +1,4 @@
-/* Nunatak command menu (⌘K / Ctrl+K) — Built on shadcn/ui Command:
+/* Fathom command menu (⌘K / Ctrl+K) — Built on shadcn/ui Command:
    cmdk's typeahead listbox engine inside a Radix Dialog (real focus trap,
    scroll lock, restore-focus, Escape + outside-pointer dismissal handled by
    Radix). Every entry is real: fixed navigation routes, the two genuine
@@ -101,10 +101,10 @@ export function CommandMenu({
     <CommandDialog
       open={open}
       onOpenChange={(v) => !v && onClose()}
-      title="Nunatak command menu"
+      title="Fathom command menu"
       className="bg-popover sm:max-w-xl"
     >
-      <Command label="Nunatak command menu">
+      <Command label="Fathom command menu">
         <CommandInput
           placeholder="Jump to a page, run an action, open a recent workflow…"
           aria-label="Search commands"

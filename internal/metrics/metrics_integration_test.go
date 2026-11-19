@@ -15,10 +15,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	"github.com/Lakhyajit-96/fathom/internal/health"
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/health"
+	"github.com/lakhyach/fathom/internal/id"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Checklist D7 / M-T1: every wired series must move under real operations.

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	"github.com/Lakhyajit-96/fathom/internal/id"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/engine"
+	"github.com/lakhyach/fathom/internal/id"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // Relay-loop T-INT tests (brief §9 items 9–11, checklist D6 R-T1/R-T2/R-T4):

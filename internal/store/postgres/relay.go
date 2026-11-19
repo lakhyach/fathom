@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/Lakhyajit-96/fathom/internal/id"
+	"github.com/lakhyach/fathom/internal/id"
 )
 
 // Store half of the pgoutbox relay (SM §6, ADR-006/007, brief §7). Delivery

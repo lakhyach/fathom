@@ -4,7 +4,7 @@ Scope: PHASE 5 — Worker execution, recovery scheduler, HTTP API & outbox relay
 Ground truth verified before editing (§1 of the brief):
 
 - HEAD = `12b0d71` (Phase 4) on `main`; parent chain `a145d57` (P2) → `f260db8` (P3) → `12b0d71` (P4); working tree clean; `git remote -v` empty. No divergence from the Phase 4 validation report.
-- Product module: `github.com/Lakhyajit-96/fathom`, go 1.26.5, 3 direct deps (uuid v1.6.0, pgx/v5 v5.11.0, migrate/v4 v4.20.1), CGO_ENABLED=0 throughout.
+- Product module: `github.com/lakhyach/fathom`, go 1.26.5, 3 direct deps (uuid v1.6.0, pgx/v5 v5.11.0, migrate/v4 v4.20.1), CGO_ENABLED=0 throughout.
 - Implemented surface (read, not assumed): `internal/engine` (pure machine, W1–W12 + W14/W14b + W5/W6 functions), `internal/store/postgres` (guarded transitions, durable idempotency, classification, outbox intents, DLQ insert on W12), `db/migrations/0001` (9 tables), `internal/app` (Component lifecycle), `internal/config`, `internal/logging` (redaction), `internal/id` (UUIDv7).
 
 ## 1. Deliverable → specification → ADR → test mapping

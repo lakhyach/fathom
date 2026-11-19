@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Lakhyajit-96/fathom/internal/engine"
-	postgres "github.com/Lakhyajit-96/fathom/internal/store/postgres"
+	"github.com/lakhyach/fathom/internal/engine"
+	postgres "github.com/lakhyach/fathom/internal/store/postgres"
 )
 
 // listStates mirrors the CHECK on workflow.state in migration 0001. The
