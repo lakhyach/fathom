@@ -56,10 +56,16 @@ for i in $(seq 1 40); do
   if echo "$status" | grep -q '"state":"FAILED"'; then
     echo "$status"; die "connector task FAILED"
   fi
-  running="$(echo "$status" | grep -o '"state":"RUNNING"' | wc -l | tr -d ' ')"
+  # The status endpoint commonly reports CONNECTOR_STARTING on its first
+  # response. With `set -o pipefail`, grep's expected no-match exit (1) would
+  # otherwise abort this polling loop before it can wait for RUNNING.
+  running="$(printf '%s' "$status" | (grep -o '"state":"RUNNING"' || true) | wc -l | tr -d ' ')"
   if [ "$running" -ge 2 ]; then echo "   RUNNING after ${i} polls"; break; fi
   sleep 3
-  [ "$i" -eq 40 ] && die "connector did not reach RUNNING in time"
+  if [ "$i" -eq 40 ]; then
+    echo "   last connector status: $status" >&2
+    die "connector did not reach RUNNING in time"
+  fi
 done
 
 echo ">> [5/6] inserting an outbox row (streams + re-snapshot path)"
