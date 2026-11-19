@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/lakhyach/fathom/internal/engine"
 	"github.com/jackc/pgx/v5"
+	"github.com/lakhyach/fathom/internal/engine"
 )
 
 // Reaper/scheduler scans (SM §8, ADR-012: deadlines are data). These are the
