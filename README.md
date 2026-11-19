@@ -32,7 +32,7 @@ flowchart LR
   Relay --> Kafka[(Kafka, optional)]
 ```
 
-For local development, Vite proxies `/v1`, `/healthz`, `/readyz`, and `/metrics` to the loopback Go API. PostgreSQL stores workflows, step state, attempts, leases, outbox records, definitions, operator actions, and audit events. The standalone CDC smoke stack is only a compatibility check; it is not the product deployment.
+For local development, Vite proxies `/v1`, `/healthz`, `/readyz`, and `/metrics` to the loopback Go API. PostgreSQL stores workflows, step state, attempts, leases, outbox records, definitions, operator actions, and audit events. Kafka is optional for local execution, but without a broker the outbox accumulates and readiness reports `relay_lag` when it exceeds the configured age. The standalone CDC smoke stack is only a compatibility check; it is not the product deployment.
 
 ## Run locally
 

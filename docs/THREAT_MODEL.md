@@ -51,7 +51,7 @@ Multi-tenant isolation, external attacker on a hosted deployment (until Phase 7 
 ## 5. What deployment would additionally require (pre-authorisation checklist)
 
 1. TLS termination + HSTS, secure cookies end-to-end (T-05/T-14 upgrade from [ACCEPTED]).
-2. Kafka SASL/TLS + ACLs, or lite relay only (recommendation: **public demo runs the pgoutbox relay**; CDC mode stays local — it is a demonstration of architecture, not a hosting requirement).
+2. The current engine supports an outbox-to-Kafka relay; there is no PostgreSQL-only relay implementation. Keep Kafka on a private network with the engine, or implement and review a supported authenticated Kafka transport before using an external broker. The CDC/Debezium smoke stack stays local; it demonstrates compatibility, not a hosting requirement.
 3. Per-role credentials provisioned out-of-band; demo accounts clearly labelled.
 4. Dependency scanning in CI (Trivy govulncheck) + secret-scan on every push.
 5. Rate limiting at the edge, not just in-app.
